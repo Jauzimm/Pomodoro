@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#022c22"/>
+      <stop offset="0.6" stop-color="#064e3b"/>
+      <stop offset="1" stop-color="#052e16"/>
+    </linearGradient>
+    <radialGradient id="glow">
+      <stop offset="0" stop-color="#a7f3d0" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#a7f3d0" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="blur"><feGaussianBlur stdDeviation="130"/></filter>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#bg)"/>
+  <g filter="url(#blur)">
+    <circle cx="480" cy="300" r="460" fill="url(#glow)"/>
+    <circle cx="1560" cy="820" r="420" fill="url(#glow)"/>
+  </g>
+  <g fill="#052e16" opacity="0.85">
+    <path d="M0 640 L 140 470 L 280 640 Z"/>
+    <path d="M180 660 L 360 440 L 540 660 Z"/>
+    <path d="M420 640 L 580 500 L 740 640 Z"/>
+    <path d="M620 660 L 800 460 L 980 660 Z"/>
+    <path d="M900 640 L 1060 510 L 1220 640 Z"/>
+    <path d="M1120 660 L 1300 450 L 1480 660 Z"/>
+    <path d="M1400 640 L 1560 500 L 1720 640 Z"/>
+    <path d="M1640 660 L 1800 470 L 1920 660 Z"/>
+  </g>
+  <rect y="660" width="1920" height="420" fill="#042f2e" opacity="0.9"/>
+</svg>

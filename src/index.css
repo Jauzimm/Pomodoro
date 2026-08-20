@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+/* Tema escuro permanente (a classe `.dark` fica sempre no <html>). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Roboto", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Roboto", ui-monospace, monospace;
+}
+
+/* Roboto autohospedada (variável, 100–900) — sem dependência externa. */
+@font-face {
+  font-family: "Roboto";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/roboto-latin-var.woff2") format("woff2");
+}
+
+html {
+  color-scheme: dark;
+  scrollbar-gutter: stable;
+}
+
+body {
+  @apply bg-zinc-100 text-zinc-800 antialiased transition-colors duration-300 dark:bg-zinc-950 dark:text-zinc-100;
+}
+
+/* Wallpaper ativo: imagem cobrindo a tela inteira (useWallpaperEffect). */
+body.ss-wallpaper {
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+/* Slider customizado (volume) */
+input[type="range"].ss-slider {
+  @apply h-1.5 w-full cursor-pointer appearance-none rounded-full bg-zinc-200 dark:bg-zinc-700;
+}
+input[type="range"].ss-slider::-webkit-slider-thumb {
+  @apply size-4 appearance-none rounded-full bg-indigo-500 shadow transition-transform hover:scale-110;
+}
+input[type="range"].ss-slider::-moz-range-thumb {
+  @apply size-4 appearance-none rounded-full border-0 bg-indigo-500 shadow transition-transform hover:scale-110;
+}
+
+/* Scrollbar discreta */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-zinc-300 dark:bg-zinc-700;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Inputs numéricos: removemos os spinners nativos (caixa em volta das setas)
+   e usamos setas customizadas sem borda (ver SettingsModal). */
+input[type="number"].ss-number {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+input[type="number"].ss-number::-webkit-inner-spin-button,
+input[type="number"].ss-number::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
