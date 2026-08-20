@@ -27,3 +27,13 @@ dist-ssr
 graphify-out/
 .opencode/
 
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# TypeScript / Vite build artifacts
+*.tsbuildinfo
+*.cache
+coverage/
+
