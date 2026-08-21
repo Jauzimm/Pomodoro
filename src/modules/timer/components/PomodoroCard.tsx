@@ -25,8 +25,13 @@ const modeText: Record<string, string> = {
   LONG_BREAK: 'text-sky-500 dark:text-sky-400',
 };
 
+interface PomodoroCardProps {
+  /** Modo Zen: oculta controles e tarefa ativa, deixando só o timer. */
+  zenHidden?: boolean;
+}
+
 /** Card central do Pomodoro: progresso circular + display + controles. */
-export function PomodoroCard() {
+export function PomodoroCard({ zenHidden = false }: PomodoroCardProps) {
   const timeLeft = useStore(selectTimeLeft);
   const total = useStore(selectCurrentDuration);
   const mode = useStore(selectMode);
@@ -52,8 +57,15 @@ export function PomodoroCard() {
         </div>
       </CircularProgress>
 
-      <TimerControls />
-      <ActiveTaskBar />
+      <div
+        className={cn(
+          'flex flex-col items-center gap-8 transition-all duration-500 ease-in-out',
+          zenHidden && 'pointer-events-none select-none opacity-0',
+        )}
+      >
+        <TimerControls />
+        <ActiveTaskBar />
+      </div>
     </section>
   );
 }

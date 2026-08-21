@@ -9,6 +9,7 @@ import { useState, type ComponentType, type ReactNode } from 'react';
 
 import { cn } from '../../shared/utils/cn';
 import { useHotkeys } from '../../shared/hooks/useHotkeys';
+import { usePresence } from '../../shared/hooks/usePresence';
 import { useTranslation } from '../../shared/i18n/useTranslation';
 
 export type SidebarPanelKey = 'tasks' | 'audio' | 'notes' | 'wallpaper';
@@ -37,6 +38,8 @@ interface SidebarProps {
   audio: ReactNode;
   notes: ReactNode;
   wallpaper: ReactNode;
+  /** Modo Zen: oculta dock/painéis (transição suave + sem interação). */
+  zenHidden?: boolean;
 }
 
 /**
@@ -44,23 +47,36 @@ interface SidebarProps {
  * Apenas ícones ficam visíveis; o painel expande quando o ícone é clicado.
  * Clicar no mesmo ícone recolhe; Esc também fecha o painel.
  */
-export function Sidebar({ tasks, audio, notes, wallpaper }: SidebarProps) {
+export function Sidebar({ tasks, audio, notes, wallpaper, zenHidden = false }: SidebarProps) {
   const [active, setActive] = useState<SidebarPanelKey | null>(null);
+  // Último painel aberto: preserva o conteúdo durante a saída animada
+  // (painel desktop recolhe pela grade; drawer faz fade-out) sem
+  // re-disparar a animação de entrada no fechamento.
+  const [lastActive, setLastActive] = useState<SidebarPanelKey | null>(null);
   const { t } = useTranslation();
+  const { mounted: drawerMounted, visible: drawerVisible } = usePresence(active !== null);
 
   const isOpen = active !== null;
-  const content =
-    active === 'tasks'
-      ? tasks
-      : active === 'audio'
-        ? audio
-        : active === 'notes'
-          ? notes
-          : active === 'wallpaper'
-            ? wallpaper
-            : null;
 
-  const toggle = (key: SidebarPanelKey) => setActive((current) => (current === key ? null : key));
+  const contentFor = (key: SidebarPanelKey | null): ReactNode => {
+    if (key === 'tasks') return tasks;
+    if (key === 'audio') return audio;
+    if (key === 'notes') return notes;
+    if (key === 'wallpaper') return wallpaper;
+    return null;
+  };
+
+  const shownKey = active ?? lastActive;
+  const content = contentFor(shownKey);
+
+  const toggle = (key: SidebarPanelKey) => {
+    if (active === key) {
+      setActive(null);
+    } else {
+      setActive(key);
+      setLastActive(key);
+    }
+  };
   const close = () => setActive(null);
 
   useHotkeys({ Escape: close }, [active]);
@@ -69,7 +85,10 @@ export function Sidebar({ tasks, audio, notes, wallpaper }: SidebarProps) {
     <>
       {/* ===== Desktop: dock flutuante + painel expansível de vidro ===== */}
       <aside
-        className="fixed inset-y-0 left-0 z-40 hidden items-center gap-4 pl-4 lg:flex"
+        className={cn(
+          'fixed inset-y-0 left-0 z-40 hidden items-center gap-4 pl-4 transition-all duration-500 ease-in-out lg:flex',
+          zenHidden && 'pointer-events-none -translate-x-24 opacity-0',
+        )}
         aria-label={t('sidebar.panels')}
       >
         <div className="flex flex-col items-center gap-2.5 rounded-2xl border border-zinc-200/50 bg-white/40 p-3 shadow-lg shadow-black/5 backdrop-blur-md dark:border-white/15 dark:bg-white/5 dark:shadow-black/30">
@@ -110,17 +129,26 @@ export function Sidebar({ tasks, audio, notes, wallpaper }: SidebarProps) {
             isOpen ? 'grid-cols-[360px]' : 'grid-cols-[0fr]',
           )}
         >
-          <div className="min-h-0 overflow-hidden">
-            <div className="h-[70vh] w-[360px] overflow-y-auto rounded-2xl border border-zinc-200/50 bg-white/50 p-3 shadow-xl shadow-black/5 backdrop-blur-xl dark:border-white/15 dark:bg-white/5 dark:shadow-black/40">
-              {content}
-            </div>
+<div className="min-h-0 overflow-hidden">
+          <div
+            key={active}
+            className={cn(
+              'h-[70vh] w-[360px] overflow-y-auto rounded-2xl border border-zinc-200/50 bg-white/50 p-3 shadow-xl shadow-black/5 backdrop-blur-xl dark:border-white/15 dark:bg-white/5 dark:shadow-black/40',
+              isOpen ? 'ss-panel-in' : 'ss-panel-out',
+            )}
+          >
+            {content}
           </div>
+        </div>
         </div>
       </aside>
 
       {/* ===== Mobile: barra inferior flutuante + drawer sobreposto ===== */}
       <nav
-        className="fixed inset-x-3 bottom-3 z-40 flex justify-around rounded-2xl border border-zinc-200/50 bg-white/40 py-1.5 shadow-lg shadow-black/5 backdrop-blur-xl lg:hidden dark:border-white/15 dark:bg-white/5 dark:shadow-black/30"
+        className={cn(
+          'fixed inset-x-3 bottom-3 z-40 flex justify-around rounded-2xl border border-zinc-200/50 bg-white/40 py-1.5 shadow-lg shadow-black/5 backdrop-blur-xl transition-all duration-500 ease-in-out lg:hidden dark:border-white/15 dark:bg-white/5 dark:shadow-black/30',
+          zenHidden && 'pointer-events-none translate-y-24 opacity-0',
+        )}
         aria-label={t('sidebar.panels')}
       >
         {SECTIONS.map(({ key, icon: Icon }) => {
@@ -147,13 +175,33 @@ export function Sidebar({ tasks, audio, notes, wallpaper }: SidebarProps) {
         })}
       </nav>
 
-      {isOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={close} aria-hidden="true" />
-          <div className="absolute bottom-20 left-3 right-3 top-3 flex flex-col rounded-2xl border border-zinc-200/50 bg-white/60 shadow-2xl backdrop-blur-xl dark:border-white/15 dark:bg-zinc-900/60">
+      {drawerMounted && (
+        <div
+          className={cn(
+            'fixed inset-0 z-50 lg:hidden',
+            (!drawerVisible || zenHidden) && 'pointer-events-none',
+          )}
+          role="dialog"
+          aria-modal="true"
+          inert={!drawerVisible || zenHidden}
+        >
+          <div
+            className={cn(
+              'absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ease-in-out motion-reduce:transition-none',
+              (!drawerVisible || zenHidden) && 'opacity-0',
+            )}
+            onClick={close}
+            aria-hidden="true"
+          />
+          <div
+            className={cn(
+              'absolute bottom-20 left-3 right-3 top-3 flex flex-col rounded-2xl border border-zinc-200/50 bg-white/60 shadow-2xl transition-all duration-300 ease-in-out backdrop-blur-xl motion-reduce:transition-none dark:border-white/15 dark:bg-zinc-900/60',
+              (!drawerVisible || zenHidden) && 'pointer-events-none translate-y-6 opacity-0',
+            )}
+          >
             <div className="flex items-center justify-between border-b border-zinc-100 p-3 dark:border-zinc-800">
               <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">
-                {active ? t(SECTION_KEYS[active]) : ''}
+                {shownKey ? t(SECTION_KEYS[shownKey]) : ''}
               </span>
               <button
                 type="button"

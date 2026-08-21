@@ -1,4 +1,4 @@
-# StudySpace — Pomodoro Workspace
+# PomoraNeo
 
 Aplicação web completa de alta produtividade para estudos: **timer Pomodoro com FSM**, **tarefas com prioridades**, **bloco de anotações** e **mixer de áudio ambiente Lo-Fi/ruídos** — tudo em React + TypeScript + Tailwind CSS + Zustand.
 

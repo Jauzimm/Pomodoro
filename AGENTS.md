@@ -1,6 +1,8 @@
-# AGENTS.md — StudySpace (Pomodoro Workspace)
+# AGENTS.md — PomoraNeo
 
 App de estudos (timer Pomodoro + tarefas + notas + som ambiente). React 19 + TypeScript + Vite 8, Tailwind CSS v4 (plugin `@tailwindcss/vite`, **sem** `tailwind.config.js`), Zustand, lucide-react, clsx + tailwind-merge. UI em pt-BR.
+
+> O README está desatualizado em pontos (cita tema claro/escuro e `useThemeEffect.ts`, que não existem mais) — confie no código e neste arquivo.
 
 ## Comandos
 
@@ -22,7 +24,7 @@ Camadas (Clean Architecture leve, Feature-First). Dependências apontam para bai
 
 ```
 src/
-├── app/            # App.tsx (layout), store.ts (slices + persist), storage.ts, Header, Sidebar
+├── app/            # App.tsx (layout), store.ts (slices + persist), storage.ts, useShortcuts, useZenMode, Header, Sidebar
 ├── core/           # Regras puras, sem React/DOM
 │   ├── types/domain.ts        # Contratos (TimerState, Task, AudioSettings…)
 │   ├── constants/index.ts     # Defaults 25/5/15, limites, metadados de UI
@@ -35,7 +37,7 @@ src/
 │       ├── hooks/             # hooks de efeito/observadores
 │       ├── *.slice.ts         # slice Zustand + seletores granulares
 │       └── services|strategies/  # lógica de aplicação (ex.: audioController, ticking)
-└── shared/         # ui (Button, Modal, Card, Slider, Switch, Badge), hooks, utils (cn, formatTime)
+└── shared/         # ui (Button, Modal, Card, Slider, Switch, Badge), hooks, i18n (translations/labels/detect), utils (cn, formatTime)
 ```
 
 * **Store:** `src/app/store.ts` compõe slices via `createTimerSlice(set, get, api)`. Persist com `partialize` (timer em execução NUNCA é persistido). Chave: `studyspace:app-state:v1`.
@@ -43,6 +45,7 @@ src/
 * **Áudio (Strategy Pattern):** `AudioController` resolve a primeira estratégia capaz (`HtmlAudioFileStrategy` → `WebAudioSynthStrategy`); síntese é o fallback garantido e também é injetada na HTML para falhas de runtime.
 * **Plano de fundo (wallpaper):** presets são SVGs em `public/wallpapers/` (assets próprios, sem rede); uploads customizados viram data URLs persistidas no localStorage — respeite os limites de `presets.ts` (2 MB por imagem, máx. 5) ou a cota de ~5MB estoura. Aplicação via `useWallpaperEffect` (define `background-image` + classe `ss-wallpaper` no `body`, com overlay de legibilidade).
 * **Layout:** tela principal = só `PomodoroCard`. Tarefas/Áudio/Notas/Plano de fundo vivem na `Sidebar` colapsável (rail de ícones + painel 360px desktop, drawer + bottom bar no mobile).
+* **Modo Zen:** durante FOCO em execução, `useZenMode` oculta controles após 10s sem mouse/tecla (prop `zenHidden` em Header/Sidebar/PomodoroCard); qualquer movimento/clique/tecla revela. Fora de foco rodando, nunca esconde.
 
 ## Seções
 

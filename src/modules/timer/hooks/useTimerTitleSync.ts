@@ -12,7 +12,7 @@ import {
 
 /**
  * Mantém o título da aba do navegador atualizado em tempo real:
- * `25:00 - Foco | StudySpace` ou o estado atual (pausado/parado).
+ * `25:00 - Foco | PomoraNeo` ou o estado atual (pausado/parado).
  */
 export function useTimerTitleSync(): void {
   const timeLeft = useStore(selectTimeLeft);
@@ -22,7 +22,7 @@ export function useTimerTitleSync(): void {
 
   useEffect(() => {
     const label = t(phaseKey(phase));
-    document.title = `${formatTime(timeLeft)} · ${label} | StudySpace`;
+    document.title = `${formatTime(timeLeft)} · ${label} | PomoraNeo`;
     return () => {
       document.title = t('title.idle');
     };

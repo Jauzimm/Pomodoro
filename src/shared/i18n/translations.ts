@@ -6,8 +6,6 @@
 import type { Language } from './types';
 
 export const pt = {
-  'header.subtitle': 'Pomodoro Workspace',
-
   'sidebar.panels': 'Painéis de trabalho',
   'sidebar.section.tasks': 'Tarefas',
   'sidebar.section.audio': 'Áudio',
@@ -17,7 +15,7 @@ export const pt = {
   'sidebar.close': 'Fechar painel',
 
   'settings.title': 'Configurações',
-  'settings.aria': 'Configurações do pomodoro',
+  'settings.aria': 'Configurações do Neo Pomora',
   'settings.language': 'Idioma',
   'settings.language.auto': 'Automático (detectar navegador)',
   'settings.durations': 'Durações (minutos)',
@@ -36,6 +34,8 @@ export const pt = {
   'key.space': 'Espaço',
 
   'app.audio': 'Áudio',
+
+  'zen.hint': 'Mova o mouse para mostrar os controles',
 
   'timer.label': 'Timer Pomodoro',
   'timer.controls': 'Controles do timer',
@@ -151,18 +151,16 @@ export const pt = {
 
   'modal.close': 'Fechar modal',
 
-  'notif.title': 'StudySpace — Ciclo concluído',
+  'notif.title': 'PomoraNeo — Ciclo concluído',
   'notif.focusDone': 'Foco finalizado! Hora do {next}.',
   'notif.breakDone': '{next} terminou. Bora focar?',
 
-  'title.idle': 'StudySpace — Pomodoro Workspace',
+  'title.idle': 'PomoraNeo — Ciclo concluído',
 } as const;
 
 export type TranslationKey = keyof typeof pt;
 
 const en: Record<TranslationKey, string> = {
-  'header.subtitle': 'Pomodoro Workspace',
-
   'sidebar.panels': 'Workspaces',
   'sidebar.section.tasks': 'Tasks',
   'sidebar.section.audio': 'Audio',
@@ -191,6 +189,8 @@ const en: Record<TranslationKey, string> = {
   'key.space': 'Space',
 
   'app.audio': 'Audio',
+
+  'zen.hint': 'Move your mouse to show the controls',
 
   'timer.label': 'Pomodoro Timer',
   'timer.controls': 'Timer controls',
@@ -306,16 +306,14 @@ const en: Record<TranslationKey, string> = {
 
   'modal.close': 'Close modal',
 
-  'notif.title': 'StudySpace — Cycle completed',
+  'notif.title': 'PomoraNeo — Cycle completed',
   'notif.focusDone': 'Focus finished! Time for {next}.',
   'notif.breakDone': '{next} ended. Ready to focus?',
 
-  'title.idle': 'StudySpace — Pomodoro Workspace',
+  'title.idle': 'PomoraNeo — Ciclo concluído',
 };
 
 const es: Record<TranslationKey, string> = {
-  'header.subtitle': 'Pomodoro Workspace',
-
   'sidebar.panels': 'Paneles de trabajo',
   'sidebar.section.tasks': 'Tareas',
   'sidebar.section.audio': 'Audio',
@@ -325,7 +323,7 @@ const es: Record<TranslationKey, string> = {
   'sidebar.close': 'Cerrar panel',
 
   'settings.title': 'Configuración',
-  'settings.aria': 'Configuración del pomodoro',
+  'settings.aria': 'Configuración de Neo Pomora',
   'settings.language': 'Idioma',
   'settings.language.auto': 'Automático (detectar navegador)',
   'settings.durations': 'Duraciones (minutos)',
@@ -344,6 +342,8 @@ const es: Record<TranslationKey, string> = {
   'key.space': 'Espacio',
 
   'app.audio': 'Audio',
+
+  'zen.hint': 'Mueve el mouse para mostrar los controles',
 
   'timer.label': 'Temporizador Pomodoro',
   'timer.controls': 'Controles del temporizador',
@@ -459,11 +459,11 @@ const es: Record<TranslationKey, string> = {
 
   'modal.close': 'Cerrar modal',
 
-  'notif.title': 'StudySpace — Ciclo completado',
+  'notif.title': 'PomoraNeo — Ciclo completado',
   'notif.focusDone': '¡Enfoque terminado! Hora de {next}.',
   'notif.breakDone': '{next} terminó. ¿A enfocarse?',
 
-  'title.idle': 'StudySpace — Pomodoro Workspace',
+  'title.idle': 'PomoraNeo — Ciclo concluído',
 };
 
 export const dictionaries: Record<Language, Record<TranslationKey, string>> = {

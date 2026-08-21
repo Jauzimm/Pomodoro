@@ -1,5 +1,5 @@
 // ============================================================================
-// DOMAIN TYPES — Contratos rígidos e imutáveis do StudySpace
+// DOMAIN TYPES — Contratos rígidos e imutáveis do PomoraNeo
 // Camada: Core Domain (agnóstica de framework)
 // ============================================================================
 

@@ -22,9 +22,10 @@ import { Volume2 } from 'lucide-react';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { useShortcuts } from './useShortcuts';
+import { useZenMode } from './useZenMode';
 
 /**
- * Aplicação StudySpace: orquestra módulos, hooks de efeito e o layout.
+ * Aplicação PomoraNeo: orquestra módulos, hooks de efeito e o layout.
  *
  * Layout: apenas o timer Pomodoro ocupa a tela principal; Tarefas, Áudio e
  * Anotações ficam em uma barra lateral colapsável (ícones → painel expansível).
@@ -39,13 +40,15 @@ export default function App() {
   useNotifications();
   useShortcuts();
   useWallpaperEffect();
+  const zenHidden = useZenMode();
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <Header />
+      <Header zenHidden={zenHidden} />
 
       <div className="flex flex-1 overflow-hidden">
         <Sidebar
+          zenHidden={zenHidden}
           tasks={
             <TodoList>
               <TodoList.Header />
@@ -77,10 +80,20 @@ export default function App() {
         {/* Área principal: o timer é o protagonista, sem outros módulos. */}
         <main className="flex flex-1 flex-col items-center overflow-y-auto px-4 pb-16 pt-20 sm:pt-24">
           <div className="flex w-full flex-1 flex-col items-center justify-center">
-            <PomodoroCard />
+            <PomodoroCard zenHidden={zenHidden} />
           </div>
         </main>
       </div>
+
+      {/* Dica do Modo Zen: surge apenas quando os controles estão ocultos. */}
+      {zenHidden && (
+        <div
+          className="pointer-events-none fixed bottom-5 left-1/2 z-30 -translate-x-1/2 rounded-full border border-white/10 bg-black/50 px-4 py-1.5 text-xs font-medium text-zinc-200 shadow-lg backdrop-blur-md"
+          aria-hidden="true"
+        >
+          {t('zen.hint')}
+        </div>
+      )}
 
       {/* Espaço reservado para a barra de navegação inferior no mobile. */}
       <div className="h-28 lg:hidden" aria-hidden="true" />
