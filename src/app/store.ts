@@ -42,6 +42,7 @@ interface PersistedState {
   audio: AudioSlice['audio'];
   notificationsEnabled: boolean;
   language: AppLanguage;
+  particlesEnabled?: boolean;
   wallpaper: Pick<WallpaperSlice, 'activeWallpaperId' | 'customWallpapers'>;
 }
 
@@ -71,6 +72,7 @@ const persistOptions: PersistOptions<AppStore, PersistedState> = {
     audio: state.audio,
     notificationsEnabled: state.notificationsEnabled,
     language: state.language,
+    particlesEnabled: state.particlesEnabled,
     wallpaper: {
       activeWallpaperId: state.activeWallpaperId,
       customWallpapers: state.customWallpapers,
@@ -87,6 +89,7 @@ const persistOptions: PersistOptions<AppStore, PersistedState> = {
       note: saved.note,
       audio: saved.audio,
       notificationsEnabled: saved.notificationsEnabled,
+      particlesEnabled: saved.particlesEnabled ?? true,
       language:
         saved.language && saved.language in LANGUAGES
           ? saved.language

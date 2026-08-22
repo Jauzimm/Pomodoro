@@ -21,6 +21,7 @@ import {
 import { Volume2 } from 'lucide-react';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
+import { ParticleCanvas } from '../shared/components/ui/ParticleCanvas';
 import { useShortcuts } from './useShortcuts';
 import { useZenMode } from './useZenMode';
 
@@ -44,6 +45,7 @@ export default function App() {
 
   return (
     <div className="flex min-h-dvh flex-col">
+      <ParticleCanvas />
       <Header zenHidden={zenHidden} />
 
       <div className="flex flex-1 overflow-hidden">

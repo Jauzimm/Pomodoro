@@ -14,6 +14,8 @@ export interface SettingsSlice {
   setNotificationsEnabled: (enabled: boolean) => void;
   language: AppLanguage;
   setLanguage: (language: AppLanguage) => void;
+  particlesEnabled: boolean;
+  setParticlesEnabled: (enabled: boolean) => void;
 }
 
 export const createSettingsSlice: StateCreator<
@@ -24,11 +26,14 @@ export const createSettingsSlice: StateCreator<
 > = (set) => ({
   notificationsEnabled: false,
   language: detectBrowserLanguage(),
+  particlesEnabled: true,
 
   setNotificationsEnabled: (notificationsEnabled) =>
     set({ notificationsEnabled }),
   setLanguage: (language) => set({ language }),
+  setParticlesEnabled: (particlesEnabled) => set({ particlesEnabled }),
 });
 
 export const selectNotificationsEnabled = (s: SettingsSlice) => s.notificationsEnabled;
 export const selectLanguage = (s: SettingsSlice) => s.language;
+export const selectParticlesEnabled = (s: SettingsSlice) => s.particlesEnabled;

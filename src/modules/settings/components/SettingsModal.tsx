@@ -72,6 +72,8 @@ export function SettingsModal() {
   const applyConfig = useStore((s) => s.applyConfig);
   const notificationsEnabled = useStore((s) => s.notificationsEnabled);
   const setNotificationsEnabled = useStore((s) => s.setNotificationsEnabled);
+  const particlesEnabled = useStore((s) => s.particlesEnabled);
+  const setParticlesEnabled = useStore((s) => s.setParticlesEnabled);
   const language = useStore(selectLanguage);
   const setLanguage = useStore((s) => s.setLanguage);
   const { t } = useTranslation();
@@ -222,6 +224,16 @@ export function SettingsModal() {
                 checked={notificationsEnabled}
                 onChange={(v) => void toggleNotifications(v)}
                 label={t('settings.notifications')}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <label htmlFor="cfg-particles" className="text-sm text-zinc-700 dark:text-zinc-200">
+                {t('settings.particles')}
+              </label>
+              <Switch
+                checked={particlesEnabled}
+                onChange={setParticlesEnabled}
+                label={t('settings.particles')}
               />
             </div>
           </fieldset>
