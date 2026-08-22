@@ -85,13 +85,13 @@ npm run lint    # oxlint — sem erros (warnings aceitos: only-export-components
 
 ## graphify
 
-This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, cross-file relationships, and an agent-crawlable wiki.
 
 When the user types `/graphify`, use the installed graphify skill or instructions before doing anything else.
 
 Rules:
-- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
-- Dirty graphify-out/ files are expected after hooks or incremental updates; dirty graph files are not a reason to skip graphify. Only skip graphify if the task is about stale or incorrect graph output, or the user explicitly says not to use it.
-- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
-- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+- **Obrigatoriedade do Grafo (Graph-First Exploration):** Para entender fluxos, relações entre módulos, depurar lógica ou responder perguntas sobre a base de código, NUNCA faça varredura manual cega de arquivos brutos. Execute PRIMEIRO `graphify query "<pergunta>"`, `graphify path "<A>" "<B>"` para mapear relações ou `graphify explain "<conceito>"`.
+- **Navegação via Wiki:** Sempre utilize `graphify-out/wiki/index.md` e os artigos de comunidade (`graphify-out/wiki/community-*.md`) para navegação estruturada antes de abrir múltiplos arquivos.
+- **Tolerância a arquivos dirty:** Arquivos em `graphify-out/` podem ficar dirty após hooks ou updates; nunca ignore o graphify por isso.
+- **Revisão arquitetural:** Consulte `graphify-out/GRAPH_REPORT.md` quando query/path/explain não trouxerem contexto amplo o suficiente.
+- **Sincronização contínua:** Após qualquer alteração de código, execute `graphify update .` para manter o grafo atualizado (AST-only, sem custo de API).
