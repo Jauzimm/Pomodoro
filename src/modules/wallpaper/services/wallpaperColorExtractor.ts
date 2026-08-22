@@ -52,7 +52,18 @@ export const PRESET_WALLPAPER_PALETTES: Record<string, WallpaperPalette> = {
   ],
 };
 
+const MAX_PALETTE_CACHE_ENTRIES = 10;
 const paletteCache = new Map<string, WallpaperPalette>();
+
+function setCachedPalette(key: string, palette: WallpaperPalette): void {
+  if (paletteCache.size >= MAX_PALETTE_CACHE_ENTRIES) {
+    const firstKey = paletteCache.keys().next().value;
+    if (firstKey) {
+      paletteCache.delete(firstKey);
+    }
+  }
+  paletteCache.set(key, palette);
+}
 
 /**
  * Extrai dinamicamente as 3 cores predominantes de uma imagem (data URL).
@@ -87,7 +98,7 @@ export function extractPredominantColorsFromDataUrl(dataUrl: string): Promise<Wa
         const data = ctx.getImageData(0, 0, size, size).data;
         const result = quantizeDominantColors(data, DEFAULT_WALLPAPER_PALETTE);
 
-        paletteCache.set(dataUrl, result);
+        setCachedPalette(dataUrl, result);
         resolve(result);
       } catch {
         resolve(DEFAULT_WALLPAPER_PALETTE);

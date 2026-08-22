@@ -496,7 +496,7 @@ export function translate(
   let str = (dict && dict[key]) ?? dictionaries.pt[key] ?? key;
   if (params) {
     for (const [name, value] of Object.entries(params)) {
-      str = str.replace(new RegExp(`\\{${name}\\}`, 'g'), String(value));
+      str = str.replaceAll(`{${name}}`, () => String(value));
     }
   }
   return str;

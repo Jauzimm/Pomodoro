@@ -48,6 +48,40 @@ export function sanitizePomodoroConfig(cfg: unknown): PomodoroConfig {
   };
 }
 
+/** Validação estrita de objeto Task. */
+function isTask(item: unknown): item is Task {
+  if (typeof item !== 'object' || item === null) return false;
+  const t = item as Record<string, unknown>;
+  const validPriorities = ['HIGH', 'MEDIUM', 'LOW'];
+  return (
+    typeof t.id === 'string' &&
+    t.id.trim() !== '' &&
+    typeof t.title === 'string' &&
+    typeof t.isCompleted === 'boolean' &&
+    typeof t.priority === 'string' &&
+    validPriorities.includes(t.priority) &&
+    typeof t.estimatedPomodoros === 'number' &&
+    Number.isFinite(t.estimatedPomodoros) &&
+    typeof t.completedPomodoros === 'number' &&
+    Number.isFinite(t.completedPomodoros) &&
+    typeof t.createdAt === 'number' &&
+    Number.isFinite(t.createdAt)
+  );
+}
+
+/** Validação estrita de wallpaper personalizado. */
+function isCustomWallpaper(item: unknown): item is { id: string; name: string; dataUrl: string } {
+  if (typeof item !== 'object' || item === null) return false;
+  const w = item as Record<string, unknown>;
+  return (
+    typeof w.id === 'string' &&
+    w.id.trim() !== '' &&
+    typeof w.name === 'string' &&
+    typeof w.dataUrl === 'string' &&
+    w.dataUrl.startsWith('data:image/')
+  );
+}
+
 /** Valida e normaliza o idioma selecionado. */
 export function sanitizeLanguage(lang: unknown): AppLanguage {
   if (typeof lang === 'string' && LANGUAGES.some((l) => l.id === lang)) {
@@ -73,7 +107,7 @@ export function sanitizePersistedState(
   return {
     ...current,
     config: sanitizePomodoroConfig(saved.config),
-    tasks: Array.isArray(saved.tasks) ? saved.tasks : current.tasks,
+    tasks: Array.isArray(saved.tasks) ? saved.tasks.filter(isTask) : current.tasks,
     activeTaskId: typeof saved.activeTaskId === 'string' ? saved.activeTaskId : null,
     note: saved.note && typeof saved.note.content === 'string'
       ? saved.note
@@ -85,7 +119,9 @@ export function sanitizePersistedState(
     particlesEnabled: typeof saved.particlesEnabled === 'boolean' ? saved.particlesEnabled : true,
     language: sanitizeLanguage(saved.language),
     activeWallpaperId: saved.wallpaper?.activeWallpaperId ?? null,
-    customWallpapers: Array.isArray(saved.wallpaper?.customWallpapers) ? saved.wallpaper.customWallpapers : [],
+    customWallpapers: Array.isArray(saved.wallpaper?.customWallpapers)
+      ? saved.wallpaper.customWallpapers.filter(isCustomWallpaper)
+      : [],
     timer: {
       ...current.timer,
       totalCompletedSessions: typeof saved.totalCompletedSessions === 'number'

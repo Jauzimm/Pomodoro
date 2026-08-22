@@ -59,13 +59,25 @@ const partiallyPersisted = {
   config: { focusDuration: 30, shortBreakDuration: 10, longBreakDuration: 20, cyclesBeforeLongBreak: 4, autoStartBreaks: false, autoStartPomodoros: false },
   totalCompletedSessions: 12,
   language: 'en',
-  tasks: [{ id: 'task-1', title: 'Task 1', isCompleted: false, priority: 'HIGH', estimatedPomodoros: 2, completedPomodoros: 1, createdAt: 100 }],
+  tasks: [
+    { id: 'task-1', title: 'Task 1', isCompleted: false, priority: 'HIGH', estimatedPomodoros: 2, completedPomodoros: 1, createdAt: 100 },
+    { id: 'task-invalid', title: 123 }, // Inválido (title não string)
+    null, // Inválido
+  ],
+  wallpaper: {
+    activeWallpaperId: 'custom-1',
+    customWallpapers: [
+      { id: 'custom-1', name: 'Wallpaper 1', dataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' },
+      { id: 'custom-bad', name: 'Bad', dataUrl: 'javascript:alert(1)' }, // Inválido (esquema inseguro)
+    ],
+  },
 };
 
 const result = sanitizePersistedState(partiallyPersisted, mockInitialStore);
 assert(result.config.focusDuration === 30, 'Config persistida válida deve ser carregada');
 assert(result.timer.totalCompletedSessions === 12, 'TotalCompletedSessions deve ser carregado');
 assert(result.language === 'en', 'Language deve ser carregado');
-assert(result.tasks.length === 1, 'Tasks devem ser carregadas');
+assert(result.tasks.length === 1, 'Apenas tasks válidas devem ser carregadas');
+assert(result.customWallpapers.length === 1, 'Apenas wallpapers com data:image/ válidos devem ser carregados');
 
 console.log('✅ Todos os testes do StateMigration passaram com sucesso!');
