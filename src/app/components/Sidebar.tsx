@@ -1,10 +1,4 @@
-import {
-  AudioLines,
-  ListTodo,
-  NotebookPen,
-  Wallpaper,
-  X,
-} from 'lucide-react';
+import { X } from 'lucide-react';
 import { useState, type ComponentType, type ReactNode } from 'react';
 
 import { cn } from '../../shared/utils/cn';
@@ -14,30 +8,15 @@ import { useTranslation } from '../../shared/i18n/useTranslation';
 
 export type SidebarPanelKey = 'tasks' | 'audio' | 'notes' | 'wallpaper';
 
-interface SidebarSection {
+export interface SidebarSection {
   key: SidebarPanelKey;
   icon: ComponentType<{ className?: string }>;
+  labelKey: 'sidebar.section.tasks' | 'sidebar.section.audio' | 'sidebar.section.notes' | 'sidebar.section.wallpaper';
+  content: ReactNode;
 }
 
-const SECTIONS: SidebarSection[] = [
-  { key: 'tasks', icon: ListTodo },
-  { key: 'audio', icon: AudioLines },
-  { key: 'notes', icon: NotebookPen },
-  { key: 'wallpaper', icon: Wallpaper },
-];
-
-const SECTION_KEYS: Record<SidebarPanelKey, 'sidebar.section.tasks' | 'sidebar.section.audio' | 'sidebar.section.notes' | 'sidebar.section.wallpaper'> = {
-  tasks: 'sidebar.section.tasks',
-  audio: 'sidebar.section.audio',
-  notes: 'sidebar.section.notes',
-  wallpaper: 'sidebar.section.wallpaper',
-};
-
 interface SidebarProps {
-  tasks: ReactNode;
-  audio: ReactNode;
-  notes: ReactNode;
-  wallpaper: ReactNode;
+  sections: SidebarSection[];
   /** Modo Zen: oculta dock/painéis (transição suave + sem interação). */
   zenHidden?: boolean;
 }
@@ -47,7 +26,7 @@ interface SidebarProps {
  * Apenas ícones ficam visíveis; o painel expande quando o ícone é clicado.
  * Clicar no mesmo ícone recolhe; Esc também fecha o painel.
  */
-export function Sidebar({ tasks, audio, notes, wallpaper, zenHidden = false }: SidebarProps) {
+export function Sidebar({ sections, zenHidden = false }: SidebarProps) {
   const [active, setActive] = useState<SidebarPanelKey | null>(null);
   // Último painel aberto: preserva o conteúdo durante a saída animada
   // (painel desktop recolhe pela grade; drawer faz fade-out) sem
@@ -58,16 +37,9 @@ export function Sidebar({ tasks, audio, notes, wallpaper, zenHidden = false }: S
 
   const isOpen = active !== null;
 
-  const contentFor = (key: SidebarPanelKey | null): ReactNode => {
-    if (key === 'tasks') return tasks;
-    if (key === 'audio') return audio;
-    if (key === 'notes') return notes;
-    if (key === 'wallpaper') return wallpaper;
-    return null;
-  };
-
   const shownKey = active ?? lastActive;
-  const content = contentFor(shownKey);
+  const shownSection = sections.find((s) => s.key === shownKey);
+  const content = shownSection?.content ?? null;
 
   const toggle = (key: SidebarPanelKey) => {
     if (active === key) {
@@ -92,9 +64,9 @@ export function Sidebar({ tasks, audio, notes, wallpaper, zenHidden = false }: S
         aria-label={t('sidebar.panels')}
       >
         <div className="flex flex-col items-center gap-2.5 rounded-2xl border border-zinc-200/50 bg-white/40 p-3 shadow-lg shadow-black/5 backdrop-blur-md dark:border-white/15 dark:bg-white/5 dark:shadow-black/30">
-          {SECTIONS.map(({ key, icon: Icon }) => {
+          {sections.map(({ key, icon: Icon, labelKey }) => {
             const isActive = active === key;
-            const label = t(SECTION_KEYS[key]);
+            const label = t(labelKey);
             return (
               <button
                 key={key}
@@ -151,9 +123,9 @@ export function Sidebar({ tasks, audio, notes, wallpaper, zenHidden = false }: S
         )}
         aria-label={t('sidebar.panels')}
       >
-        {SECTIONS.map(({ key, icon: Icon }) => {
+        {sections.map(({ key, icon: Icon, labelKey }) => {
           const isActive = active === key;
-          const label = t(SECTION_KEYS[key]);
+          const label = t(labelKey);
           return (
             <button
               key={key}
@@ -201,7 +173,7 @@ export function Sidebar({ tasks, audio, notes, wallpaper, zenHidden = false }: S
           >
             <div className="flex items-center justify-between border-b border-zinc-100 p-3 dark:border-zinc-800">
               <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">
-                {shownKey ? t(SECTION_KEYS[shownKey]) : ''}
+                {shownSection ? t(shownSection.labelKey) : ''}
               </span>
               <button
                 type="button"

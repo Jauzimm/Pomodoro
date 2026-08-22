@@ -3,6 +3,7 @@
 // ============================================================================
 
 import type {
+  AmbientSoundType,
   AudioSettings,
   PomodoroConfig,
   SoundAlertPreset,
@@ -68,7 +69,7 @@ export const SOUND_PRESETS: {
 
 /** Metadados de exibição de cada som ambiente. */
 export const AMBIENT_SOUNDS: {
-  id: 'LOFI_BEATS' | 'RAIN' | 'CAFE' | 'FIREPLACE' | 'BROWN_NOISE';
+  id: AmbientSoundType;
   label: string;
   description: string;
 }[] = [

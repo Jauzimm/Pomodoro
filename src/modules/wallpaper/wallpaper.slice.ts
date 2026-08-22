@@ -6,6 +6,7 @@
 import type { StateCreator } from 'zustand';
 
 import type { AppStore } from '../../app/store';
+import { generateId } from '../../shared/utils/formatTime';
 
 export interface CustomWallpaper {
   id: string;
@@ -23,8 +24,6 @@ export interface WallpaperSlice {
   removeCustomWallpaper: (id: string) => void;
 }
 
-const createWallpaperId = () => `custom-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-
 export const createWallpaperSlice: StateCreator<
   AppStore,
   [],
@@ -38,7 +37,7 @@ export const createWallpaperSlice: StateCreator<
 
   addCustomWallpaper: (name, dataUrl) =>
     set((state) => {
-      const id = createWallpaperId();
+      const id = generateId();
       return {
         customWallpapers: [
           ...state.customWallpapers.slice(-4),

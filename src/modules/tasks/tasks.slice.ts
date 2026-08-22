@@ -120,3 +120,5 @@ export const selectTasks = (s: TasksSlice) => s.tasks;
 export const selectActiveTaskId = (s: TasksSlice) => s.activeTaskId;
 export const selectActiveTask = (s: TasksSlice) =>
   s.tasks.find((t) => t.id === s.activeTaskId) ?? null;
+export const makeSelectIsActiveTask = (taskId: string) =>
+  (s: TasksSlice): boolean => s.activeTaskId === taskId;

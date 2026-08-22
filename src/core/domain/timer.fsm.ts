@@ -69,9 +69,6 @@ export const nextMode = (
   return currentCycle >= config.cyclesBeforeLongBreak ? 'LONG_BREAK' : 'SHORT_BREAK';
 };
 
-export const modeLabel = (mode: TimerMode): string =>
-  mode === 'FOCUS' ? 'Foco' : mode === 'SHORT_BREAK' ? 'Descanso Curto' : 'Descanso Longo';
-
 /**
  * Reducer puro da FSM. Retorna uma transição; nunca muta o estado recebido.
  */

@@ -20,6 +20,7 @@ import {
   type WallpaperSlice,
 } from '../modules/wallpaper/wallpaper.slice';
 import type { PomodoroConfig, Task } from '../core/types/domain';
+import { DEFAULT_POMODORO_CONFIG } from '../core/constants';
 import type { AppLanguage } from '../shared/i18n/types';
 import { LANGUAGES } from '../shared/i18n/types';
 import { detectBrowserLanguage } from '../shared/i18n/detect';
@@ -60,6 +61,20 @@ const isPersistedState = (value: unknown): value is PersistedState => {
   );
 };
 
+/** Validação estrutural profunda: garante que nenhum campo de config é string ou NaN. */
+const isValidPomodoroConfig = (c: unknown): c is PomodoroConfig => {
+  if (typeof c !== 'object' || c === null) return false;
+  const cfg = c as Record<string, unknown>;
+  return (
+    typeof cfg.focusDuration === 'number' && cfg.focusDuration > 0 &&
+    typeof cfg.shortBreakDuration === 'number' && cfg.shortBreakDuration > 0 &&
+    typeof cfg.longBreakDuration === 'number' && cfg.longBreakDuration > 0 &&
+    typeof cfg.cyclesBeforeLongBreak === 'number' && cfg.cyclesBeforeLongBreak > 0 &&
+    typeof cfg.autoStartBreaks === 'boolean' &&
+    typeof cfg.autoStartPomodoros === 'boolean'
+  );
+};
+
 const persistOptions: PersistOptions<AppStore, PersistedState> = {
   name: 'studyspace:app-state:v1',
   storage: createAppStorage<PersistedState>(),
@@ -83,7 +98,7 @@ const persistOptions: PersistOptions<AppStore, PersistedState> = {
     if (!saved) return current;
     return {
       ...current,
-      config: saved.config,
+      config: isValidPomodoroConfig(saved.config) ? saved.config : DEFAULT_POMODORO_CONFIG,
       tasks: saved.tasks,
       activeTaskId: saved.activeTaskId,
       note: saved.note,

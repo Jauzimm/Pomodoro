@@ -13,6 +13,7 @@ import {
   type TimerPhase,
   type TimerTransition,
 } from '../../core/domain/timer.fsm';
+import { DEFAULT_POMODORO_CONFIG, INITIAL_TIMER_STATE } from '../../core/constants';
 import type { PomodoroConfig, TimerState } from '../../core/types/domain';
 
 export interface TimerSlice {
@@ -52,21 +53,8 @@ export const createTimerSlice: StateCreator<
   };
 
   return {
-    timer: {
-      mode: 'FOCUS',
-      status: 'IDLE',
-      timeLeft: 25 * 60,
-      currentCycle: 1,
-      totalCompletedSessions: 0,
-    },
-    config: {
-      focusDuration: 25,
-      shortBreakDuration: 5,
-      longBreakDuration: 15,
-      cyclesBeforeLongBreak: 4,
-      autoStartBreaks: true,
-      autoStartPomodoros: false,
-    },
+    timer: { ...INITIAL_TIMER_STATE },
+    config: { ...DEFAULT_POMODORO_CONFIG },
     phase: 'IDLE',
 
     toggle: () => {
@@ -178,14 +166,3 @@ export const selectIsRunning = (s: TimerSlice) => s.timer.status === 'RUNNING';
 export const selectTick = (s: TimerSlice) => s.tick;
 
 export const selectCycleCount = (s: TimerSlice) => s.config.cyclesBeforeLongBreak;
-
-export const phaseLabel = (phase: TimerPhase): string =>
-  phase.includes('FOCUS')
-    ? 'Foco'
-    : phase.includes('SHORT_BREAK')
-      ? 'Descanso Curto'
-      : phase.includes('LONG_BREAK')
-        ? 'Descanso Longo'
-        : phase === 'COMPLETED'
-          ? 'Concluído'
-          : 'Pronto';

@@ -5,13 +5,14 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 
 import { useStore } from '../../../app/store';
 import type { Task } from '../../../core/types/domain';
 import { cn } from '../../../shared/utils/cn';
 import { useTranslation } from '../../../shared/i18n/useTranslation';
 import { PriorityBadge } from '../../../shared/components/ui/Badge';
+import { makeSelectIsActiveTask } from '../tasks.slice';
 
 interface TaskItemProps {
   task: Task;
@@ -25,7 +26,8 @@ export function TaskItem({ task }: TaskItemProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(task.title);
 
-  const isActive = useStore((s) => s.activeTaskId === task.id);
+  const selectIsActive = useMemo(() => makeSelectIsActiveTask(task.id), [task.id]);
+  const isActive = useStore(selectIsActive);
   const toggleTask = useStore((s) => s.toggleTask);
   const removeTask = useStore((s) => s.removeTask);
   const editTask = useStore((s) => s.editTask);
