@@ -1,11 +1,18 @@
+// ============================================================================
+// USE LOCAL STORAGE — Hook genérico de persistência local
+// Camada: Shared Hooks
+// ============================================================================
+
 import { useCallback, useEffect, useState } from 'react';
 
 /**
- * Hook genérico de persistência em `localStorage` com estado sincronizado.
- * Usa o `LocalStorageAdapter` (core) para leitura/escrita resiliente.
+ * Hook genérico de persistência em `localStorage` com estado reativo e segurança contra SSR.
  */
 export function useLocalStorage<T>(key: string, initialValue: T) {
   const [value, setValue] = useState<T>(() => {
+    if (typeof window === 'undefined' || !window.localStorage) {
+      return initialValue;
+    }
     try {
       const raw = window.localStorage.getItem(key);
       return raw === null ? initialValue : (JSON.parse(raw) as T);
@@ -15,6 +22,7 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
   });
 
   useEffect(() => {
+    if (typeof window === 'undefined' || !window.localStorage) return;
     try {
       window.localStorage.setItem(key, JSON.stringify(value));
     } catch (error) {
@@ -23,7 +31,13 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
   }, [key, value]);
 
   const remove = useCallback(() => {
-    window.localStorage.removeItem(key);
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        window.localStorage.removeItem(key);
+      } catch (error) {
+        console.warn(`[useLocalStorage] Falha ao remover "${key}":`, error);
+      }
+    }
     setValue(initialValue);
   }, [key, initialValue]);
 

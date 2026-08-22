@@ -20,17 +20,23 @@ export function Scratchpad() {
   const [copied, setCopied] = useState(false);
   const { t } = useTranslation();
 
-  // Estado local para digitação fluida + gravação no slice com debounce.
+  // Estado local para digitação imediata
   const [draft, setDraft] = useState(note.content);
+  const [prevStoreContent, setPrevStoreContent] = useState(note.content);
   const debouncedDraft = useDebounce(draft, 300);
 
-  useEffect(() => {
-    setContent(debouncedDraft);
-  }, [debouncedDraft, setContent]);
-
-  useEffect(() => {
+  // Ajusta o rascunho se o valor persistido/externo mudar
+  if (note.content !== prevStoreContent) {
+    setPrevStoreContent(note.content);
     setDraft(note.content);
-  }, [note.content]);
+  }
+
+  // Sincroniza rascunho com o store após o debounce
+  useEffect(() => {
+    if (debouncedDraft !== note.content) {
+      setContent(debouncedDraft);
+    }
+  }, [debouncedDraft, note.content, setContent]);
 
   const stats = useMemo(() => {
     const words = draft.trim() === '' ? 0 : (draft.match(WORD_PATTERN) ?? []).length;

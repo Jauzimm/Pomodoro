@@ -1,8 +1,8 @@
 // ============================================================================
 // TIMER FSM — Máquina de Estados Finita determinística e pura
-// Camada: Core Domain (sem dependência de React/browser)
+// Camada: Core Domain (sem dependência de React/browser/DOM)
 //
-// Estados:
+// Estados FSM:
 //   IDLE | RUNNING_FOCUS | PAUSED_FOCUS | RUNNING_SHORT_BREAK |
 //   PAUSED_SHORT_BREAK | RUNNING_LONG_BREAK | PAUSED_LONG_BREAK | COMPLETED
 //
@@ -13,7 +13,7 @@
 import { DEFAULT_POMODORO_CONFIG, INITIAL_TIMER_STATE } from '../constants';
 import type { PomodoroConfig, TimerMode, TimerState } from '../types/domain';
 
-/** Modo base sem RUNNING/PAUSED — usado para rotular o estado. */
+/** Modo base com status de execução — usado para rotular o estado da FSM. */
 export type TimerPhase =
   | 'IDLE'
   | 'RUNNING_FOCUS'
@@ -36,30 +36,29 @@ export type TimerTransition =
   | { kind: 'NEXT'; state: TimerState; phase: TimerPhase }
   | { kind: 'COMPLETED_CYCLE'; state: TimerState; phase: TimerPhase; completedMode: TimerMode };
 
-/** Duração em segundos do modo atual. */
-export const durationOf = (config: PomodoroConfig, mode: TimerMode): number =>
-  mode === 'FOCUS'
-    ? config.focusDuration * 60
-    : mode === 'SHORT_BREAK'
-      ? config.shortBreakDuration * 60
-      : config.longBreakDuration * 60;
+/** Duração em segundos do modo atual com base na configuração. */
+export const durationOf = (config: PomodoroConfig, mode: TimerMode): number => {
+  switch (mode) {
+    case 'FOCUS':
+      return config.focusDuration * 60;
+    case 'SHORT_BREAK':
+      return config.shortBreakDuration * 60;
+    case 'LONG_BREAK':
+      return config.longBreakDuration * 60;
+  }
+};
 
+/** Mapeia o estado atual para a fase correspondente da FSM. */
 export const phaseOf = (state: TimerState): TimerPhase => {
   if (state.status === 'IDLE') return 'IDLE';
-  const mode =
-    state.mode === 'FOCUS'
-      ? 'FOCUS'
-      : state.mode === 'SHORT_BREAK'
-        ? 'SHORT_BREAK'
-        : 'LONG_BREAK';
   const status = state.status === 'RUNNING' ? 'RUNNING' : 'PAUSED';
-  return `${status}_${mode}` as TimerPhase;
+  return `${status}_${state.mode}` as TimerPhase;
 };
 
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(max, Math.max(min, value));
 
-/** Próximo modo seguindo o fluxo 4×Foco → Descanso Longo. */
+/** Próximo modo no ciclo padrão (4×Foco → Descanso Longo). */
 export const nextMode = (
   mode: TimerMode,
   currentCycle: number,
@@ -81,7 +80,9 @@ export function timerReducer(
 
   switch (event.type) {
     case 'ON_START': {
-      if (phase === 'COMPLETED' || state.status === 'RUNNING') return { kind: 'NEXT', state, phase };
+      if (phase === 'COMPLETED' || state.status === 'RUNNING') {
+        return { kind: 'NEXT', state, phase };
+      }
       return {
         kind: 'NEXT',
         state: { ...state, status: 'RUNNING' },
@@ -90,7 +91,9 @@ export function timerReducer(
     }
 
     case 'ON_PAUSE': {
-      if (state.status !== 'RUNNING') return { kind: 'NEXT', state, phase };
+      if (state.status !== 'RUNNING') {
+        return { kind: 'NEXT', state, phase };
+      }
       return {
         kind: 'NEXT',
         state: { ...state, status: 'PAUSED' },
@@ -99,12 +102,14 @@ export function timerReducer(
     }
 
     case 'ON_TICK': {
-      if (state.status !== 'RUNNING') return { kind: 'NEXT', state, phase };
+      if (state.status !== 'RUNNING') {
+        return { kind: 'NEXT', state, phase };
+      }
       const next = Math.max(0, state.timeLeft - event.secondsElapsed);
       if (next > 0) {
         return { kind: 'NEXT', state: { ...state, timeLeft: next }, phase };
       }
-      // Tempo esgotado → transição de completude (o orquestrador decide o destino).
+      // Tempo esgotado → transição de completude de ciclo
       return {
         kind: 'COMPLETED_CYCLE',
         state: { ...state, timeLeft: 0 },
@@ -118,9 +123,10 @@ export function timerReducer(
       const nextCycle = completedFocus
         ? (state.currentCycle % config.cyclesBeforeLongBreak) + 1
         : state.currentCycle;
-      const next: TimerMode = completedFocus
+      const next = completedFocus
         ? nextMode(state.mode, state.currentCycle, config)
         : 'FOCUS';
+
       return {
         kind: 'NEXT',
         state: {
@@ -135,11 +141,11 @@ export function timerReducer(
     }
 
     case 'ON_SKIP': {
-      const next: TimerMode =
-        state.mode === 'FOCUS'
-          ? nextMode(state.mode, state.currentCycle, config)
-          : 'FOCUS';
+      const next = state.mode === 'FOCUS'
+        ? nextMode(state.mode, state.currentCycle, config)
+        : 'FOCUS';
       const skipCompletedFocus = state.mode === 'FOCUS';
+
       return {
         kind: 'NEXT',
         state: {

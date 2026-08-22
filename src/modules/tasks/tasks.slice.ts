@@ -1,14 +1,14 @@
 // ============================================================================
-// TASKS SLICE — To-Do com prioridades + vínculo da tarefa ativa
+// TASKS SLICE — To-Do com prioridades e vínculo com o Pomodoro
 // Camada: Application Logic (Zustand)
 // ============================================================================
 
 import type { StateCreator } from 'zustand';
 
 import type { AppStore } from '../../app/store';
-import { PRIORITY_ORDER } from '../../core/constants';
 import type { Task, TaskPriority } from '../../core/types/domain';
-import { generateId } from '../../shared/utils/formatTime';
+import { generateId } from '../../shared/utils/id';
+import { sortTasksByPriority } from './domain/taskSorting';
 
 export interface TasksSlice {
   tasks: Task[];
@@ -24,12 +24,7 @@ export interface TasksSlice {
   clearCompleted: () => void;
 }
 
-export const sortTasks = (tasks: Task[]): Task[] =>
-  [...tasks].sort(
-    (a, b) =>
-      PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority] ||
-      b.createdAt - a.createdAt,
-  );
+export const sortTasks = sortTasksByPriority;
 
 export const createTasksSlice: StateCreator<
   AppStore,
@@ -82,7 +77,7 @@ export const createTasksSlice: StateCreator<
 
   reorderTask: (id, direction) =>
     set((state) => {
-      const sorted = sortTasks(state.tasks);
+      const sorted = sortTasksByPriority(state.tasks);
       const index = sorted.findIndex((t) => t.id === id);
       if (index === -1) return state;
       const target = index + direction;

@@ -1,18 +1,30 @@
-import { useEffect, useState } from 'react';
+// ============================================================================
+// USE MEDIA QUERY — Hook de consulta de mídia responsiva
+// Camada: Shared Hooks
+// ============================================================================
 
-/** Hook responsivo: retorna `true` quando a media query coincide. */
+import { useSyncExternalStore } from 'react';
+
+/**
+ * Hook responsivo utilizando useSyncExternalStore (React 18/19).
+ * Elimina re-renders em cascata no mount e garante compatibilidade com SSR.
+ */
 export function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState(() =>
-    typeof window !== 'undefined' ? window.matchMedia(query).matches : false,
+  return useSyncExternalStore(
+    (callback) => {
+      if (typeof window === 'undefined' || !window.matchMedia) {
+        return () => {};
+      }
+      const mql = window.matchMedia(query);
+      mql.addEventListener('change', callback);
+      return () => mql.removeEventListener('change', callback);
+    },
+    () => {
+      if (typeof window === 'undefined' || !window.matchMedia) {
+        return false;
+      }
+      return window.matchMedia(query).matches;
+    },
+    () => false,
   );
-
-  useEffect(() => {
-    const mql = window.matchMedia(query);
-    const onChange = (e: MediaQueryListEvent) => setMatches(e.matches);
-    setMatches(mql.matches);
-    mql.addEventListener('change', onChange);
-    return () => mql.removeEventListener('change', onChange);
-  }, [query]);
-
-  return matches;
 }

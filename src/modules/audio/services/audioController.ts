@@ -1,9 +1,10 @@
 // ============================================================================
-// AUDIO CONTROLLER — Orquestrador das estratégias de som (singleton)
+// AUDIO CONTROLLER — Orquestrador de estratégias de som (Strategy Pattern + DI)
 // Camada: Application Logic (serviço de áudio)
 //
-// Encapsula a seleção de estratégia (html → synth fallback), o desbloqueio do
-// AudioContext e o estado do ambiente ativo. A UI só conversa com este serviço.
+// Encapsula a seleção dinâmica de estratégia (html file -> web audio synth fallback),
+// o desbloqueio de contexto (autoplay policy) e a sincronização do som ambiente.
+// Permite injeção de dependências para isolamento em testes.
 // ============================================================================
 
 import type {
@@ -19,18 +20,29 @@ import type { AudioStrategy } from '../strategies/audio.strategy';
 
 type StrategyKind = 'alert' | 'ambient';
 
-class AudioController {
+export interface IAudioController {
+  unlock(): Promise<void>;
+  playAlert(sound: SoundAlertPreset, volume: number): Promise<void>;
+  setAlertVolume(volume: number): void;
+  stopAlert(): void;
+  setAmbient(type: AmbientSoundType | null, volume: number): Promise<void>;
+  setAmbientVolume(volume: number): void;
+  stopAll(): void;
+}
+
+export class AudioController implements IAudioController {
   private readonly strategies: AudioStrategy[];
-
   private ambient: { type: AmbientSoundType; strategy: AudioStrategy } | null = null;
-  private pendingAmbientType: AmbientSoundType | null = null;
+  private currentAmbientRequestId = 0;
 
-  constructor() {
-    // A síntese Web Audio é o fallback garantido: além de ser resolvida
-    // quando nenhuma estratégia consegue reproduzir, é injetada na estratégia
-    // HTML para cobrir falhas de reprodução em tempo de execução.
-    const synth = new WebAudioSynthStrategy();
-    this.strategies = [new HtmlAudioFileStrategy(synth), synth];
+  constructor(strategies?: AudioStrategy[]) {
+    if (strategies && strategies.length > 0) {
+      this.strategies = strategies;
+    } else {
+      // Default: HtmlAudioFileStrategy com síntese Web Audio como fallback
+      const synth = new WebAudioSynthStrategy();
+      this.strategies = [new HtmlAudioFileStrategy(synth), synth];
+    }
   }
 
   /** Deve ser chamado após o primeiro gesto do usuário (autoplay policy). */
@@ -38,7 +50,7 @@ class AudioController {
     return unlockAudioContext();
   }
 
-  /** Resolve a primeira estratégia capaz de reproduzir o recurso pedido. */
+  /** Resolve a primeira estratégia capaz de reproduzir o recurso solicitado. */
   private async resolveStrategy(
     kind: StrategyKind,
     sound: SoundAlertPreset | AmbientSoundType,
@@ -48,9 +60,10 @@ class AudioController {
         kind === 'alert'
           ? strategy.canPlayAlert(sound as SoundAlertPreset)
           : strategy.canPlayAmbient(sound as AmbientSoundType);
+
       if (await canPlay) return strategy;
     }
-    // Fallback garantido: a síntese Web Audio responde por tudo.
+    // Fallback garantido: última estratégia registrada (síntese)
     return this.strategies[this.strategies.length - 1];
   }
 
@@ -60,7 +73,7 @@ class AudioController {
       this.stopAlert();
       return;
     }
-    // Garante um único alarme por vez: corta qualquer alerta em reprodução.
+
     this.stopAlert();
     const strategy = await this.resolveStrategy('alert', sound);
     strategy.playAlert(sound, volume);
@@ -73,17 +86,19 @@ class AudioController {
     }
   }
 
-  /** Interrompe imediatamente o alarme em reprodução (em todas as estratégias). */
+  /** Interrompe imediatamente qualquer alarme em reprodução. */
   stopAlert(): void {
-    for (const strategy of this.strategies) strategy.stopAlert();
+    for (const strategy of this.strategies) {
+      strategy.stopAlert();
+    }
   }
 
   /**
-   * Liga/troca/desliga o som ambiente.
-   * `type = null` desliga; caso contrário escolhe a melhor estratégia.
+   * Ativa, altera ou desliga o som ambiente.
+   * `type = null` desliga o som ambiente ativo.
    */
   async setAmbient(type: AmbientSoundType | null, volume: number): Promise<void> {
-    this.pendingAmbientType = type;
+    const requestId = ++this.currentAmbientRequestId;
 
     if (type === null) {
       this.ambient?.strategy.stopAmbient();
@@ -100,7 +115,9 @@ class AudioController {
     this.ambient = null;
 
     const strategy = await this.resolveStrategy('ambient', type);
-    if (this.pendingAmbientType !== type) {
+
+    // Evita condição de corrida se o usuário trocou o tipo durante a resolução assíncrona
+    if (this.currentAmbientRequestId !== requestId) {
       return;
     }
 
@@ -113,14 +130,13 @@ class AudioController {
     this.ambient?.strategy.setAmbientVolume(volume);
   }
 
-  /** Para todos os sons (alarmes + ambiente). */
+  /** Para todos os canais de áudio (alarmes + som ambiente). */
   stopAll(): void {
     this.stopAlert();
     this.ambient?.strategy.stopAll();
     this.ambient = null;
-    this.pendingAmbientType = null;
   }
 }
 
-/** Singleton global do controlador de áudio. */
+/** Singleton padrão da aplicação. */
 export const audioController = new AudioController();
