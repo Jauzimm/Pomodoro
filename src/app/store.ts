@@ -1,5 +1,5 @@
 // ============================================================================
-// STORE — Store Zustand unificado (slices desacoplados + persistência)
+// STORE — Store Zustand unificado (slices desacoplados + persistência com schema)
 // Camada: Application Logic
 // ============================================================================
 
@@ -20,10 +20,8 @@ import {
   type WallpaperSlice,
 } from '../modules/wallpaper/wallpaper.slice';
 import type { PomodoroConfig, Task } from '../core/types/domain';
-import { DEFAULT_POMODORO_CONFIG } from '../core/constants';
 import type { AppLanguage } from '../shared/i18n/types';
-import { LANGUAGES } from '../shared/i18n/types';
-import { detectBrowserLanguage } from '../shared/i18n/detect';
+import { sanitizePersistedState } from './schema/stateMigration';
 
 export interface AppStore
   extends TimerSlice,
@@ -34,7 +32,7 @@ export interface AppStore
     WallpaperSlice {}
 
 /** Subconjunto persistido em disco (o timer em execução nunca é salvo). */
-interface PersistedState {
+export interface PersistedState {
   config: PomodoroConfig;
   totalCompletedSessions: number;
   tasks: Task[];
@@ -46,34 +44,6 @@ interface PersistedState {
   particlesEnabled?: boolean;
   wallpaper: Pick<WallpaperSlice, 'activeWallpaperId' | 'customWallpapers'>;
 }
-
-const isPersistedState = (value: unknown): value is PersistedState => {
-  if (typeof value !== 'object' || value === null) return false;
-  const v = value as Record<string, unknown>;
-  return (
-    typeof v.config === 'object' &&
-    v.config !== null &&
-    Array.isArray(v.tasks) &&
-    typeof v.note === 'object' &&
-    v.note !== null &&
-    typeof v.audio === 'object' &&
-    v.audio !== null
-  );
-};
-
-/** Validação estrutural profunda: garante que nenhum campo de config é string ou NaN. */
-const isValidPomodoroConfig = (c: unknown): c is PomodoroConfig => {
-  if (typeof c !== 'object' || c === null) return false;
-  const cfg = c as Record<string, unknown>;
-  return (
-    typeof cfg.focusDuration === 'number' && cfg.focusDuration > 0 &&
-    typeof cfg.shortBreakDuration === 'number' && cfg.shortBreakDuration > 0 &&
-    typeof cfg.longBreakDuration === 'number' && cfg.longBreakDuration > 0 &&
-    typeof cfg.cyclesBeforeLongBreak === 'number' && cfg.cyclesBeforeLongBreak > 0 &&
-    typeof cfg.autoStartBreaks === 'boolean' &&
-    typeof cfg.autoStartPomodoros === 'boolean'
-  );
-};
 
 const persistOptions: PersistOptions<AppStore, PersistedState> = {
   name: 'studyspace:app-state:v1',
@@ -93,30 +63,7 @@ const persistOptions: PersistOptions<AppStore, PersistedState> = {
       customWallpapers: state.customWallpapers,
     },
   }),
-  merge: (persisted, current) => {
-    const saved = isPersistedState(persisted) ? persisted : null;
-    if (!saved) return current;
-    return {
-      ...current,
-      config: isValidPomodoroConfig(saved.config) ? saved.config : DEFAULT_POMODORO_CONFIG,
-      tasks: saved.tasks,
-      activeTaskId: saved.activeTaskId,
-      note: saved.note,
-      audio: saved.audio,
-      notificationsEnabled: saved.notificationsEnabled,
-      particlesEnabled: saved.particlesEnabled ?? true,
-      language:
-        saved.language && saved.language in LANGUAGES
-          ? saved.language
-          : detectBrowserLanguage(),
-      activeWallpaperId: saved.wallpaper?.activeWallpaperId ?? null,
-      customWallpapers: saved.wallpaper?.customWallpapers ?? [],
-      timer: {
-        ...current.timer,
-        totalCompletedSessions: saved.totalCompletedSessions,
-      },
-    };
-  },
+  merge: (persisted, current) => sanitizePersistedState(persisted, current),
 };
 
 export const useStore = create<AppStore>()(

@@ -1,5 +1,5 @@
 // ============================================================================
-// TIMER FSM — Máquina de Estados Finita determinística e pura
+// TIMER FSM — Máquina de Estados Finita determinística e pura (State Pattern)
 // Camada: Core Domain (sem dependência de React/browser/DOM)
 //
 // Estados FSM:
@@ -68,8 +68,138 @@ export const nextMode = (
   return currentCycle >= config.cyclesBeforeLongBreak ? 'LONG_BREAK' : 'SHORT_BREAK';
 };
 
+// ----------------------------------------------------------------------------
+// Funções de Guarda Semânticas (State Guards)
+// ----------------------------------------------------------------------------
+
+export const canStart = (state: TimerState): boolean =>
+  state.status !== 'RUNNING' && state.timeLeft > 0;
+
+export const canPause = (state: TimerState): boolean =>
+  state.status === 'RUNNING';
+
+export const canReset = (state: TimerState): boolean =>
+  state.status !== 'IDLE' || state.timeLeft !== durationOf(DEFAULT_POMODORO_CONFIG, state.mode);
+
+export const isRunning = (phase: TimerPhase): boolean =>
+  phase.startsWith('RUNNING');
+
+// ----------------------------------------------------------------------------
+// Handlers Especializados de Transição (State Handlers)
+// ----------------------------------------------------------------------------
+
+function handleStart(state: TimerState, phase: TimerPhase): TimerTransition {
+  if (phase === 'COMPLETED' || state.status === 'RUNNING') {
+    return { kind: 'NEXT', state, phase };
+  }
+  return {
+    kind: 'NEXT',
+    state: { ...state, status: 'RUNNING' },
+    phase: `RUNNING_${state.mode}` as TimerPhase,
+  };
+}
+
+function handlePause(state: TimerState, phase: TimerPhase): TimerTransition {
+  if (state.status !== 'RUNNING') {
+    return { kind: 'NEXT', state, phase };
+  }
+  return {
+    kind: 'NEXT',
+    state: { ...state, status: 'PAUSED' },
+    phase: `PAUSED_${state.mode}` as TimerPhase,
+  };
+}
+
+function handleTick(
+  state: TimerState,
+  secondsElapsed: number,
+  phase: TimerPhase,
+): TimerTransition {
+  if (state.status !== 'RUNNING') {
+    return { kind: 'NEXT', state, phase };
+  }
+  const next = Math.max(0, state.timeLeft - secondsElapsed);
+  if (next > 0) {
+    return { kind: 'NEXT', state: { ...state, timeLeft: next }, phase };
+  }
+  // Tempo esgotado -> sinaliza completude de ciclo
+  return {
+    kind: 'COMPLETED_CYCLE',
+    state: { ...state, timeLeft: 0 },
+    phase: 'COMPLETED',
+    completedMode: state.mode,
+  };
+}
+
+function handleComplete(
+  state: TimerState,
+  config: PomodoroConfig,
+): TimerTransition {
+  const completedFocus = state.mode === 'FOCUS';
+  const nextCycle = completedFocus
+    ? (state.currentCycle % config.cyclesBeforeLongBreak) + 1
+    : state.currentCycle;
+  const next = completedFocus
+    ? nextMode(state.mode, state.currentCycle, config)
+    : 'FOCUS';
+
+  return {
+    kind: 'NEXT',
+    state: {
+      mode: next,
+      status: 'IDLE',
+      timeLeft: durationOf(config, next),
+      currentCycle: nextCycle,
+      totalCompletedSessions: state.totalCompletedSessions + (completedFocus ? 1 : 0),
+    },
+    phase: 'IDLE',
+  };
+}
+
+function handleSkip(
+  state: TimerState,
+  config: PomodoroConfig,
+): TimerTransition {
+  const next = state.mode === 'FOCUS'
+    ? nextMode(state.mode, state.currentCycle, config)
+    : 'FOCUS';
+  const skipCompletedFocus = state.mode === 'FOCUS';
+
+  return {
+    kind: 'NEXT',
+    state: {
+      mode: next,
+      status: 'IDLE',
+      timeLeft: durationOf(config, next),
+      currentCycle: skipCompletedFocus
+        ? (state.currentCycle % config.cyclesBeforeLongBreak) + 1
+        : state.currentCycle,
+      totalCompletedSessions:
+        state.totalCompletedSessions + (skipCompletedFocus ? 1 : 0),
+    },
+    phase: 'IDLE',
+  };
+}
+
+function handleReset(
+  state: TimerState,
+  config: PomodoroConfig,
+): TimerTransition {
+  return {
+    kind: 'NEXT',
+    state: {
+      ...INITIAL_TIMER_STATE,
+      mode: state.mode,
+      timeLeft: durationOf(config, state.mode),
+      currentCycle: clamp(state.currentCycle, 1, config.cyclesBeforeLongBreak),
+    },
+    phase: 'IDLE',
+  };
+}
+
 /**
- * Reducer puro da FSM. Retorna uma transição; nunca muta o estado recebido.
+ * Reducer puro e determinístico da FSM.
+ * Retorna uma nova transição sem efeitos colaterais nem mutação de estado.
  */
 export function timerReducer(
   state: TimerState,
@@ -79,104 +209,17 @@ export function timerReducer(
   const phase = phaseOf(state);
 
   switch (event.type) {
-    case 'ON_START': {
-      if (phase === 'COMPLETED' || state.status === 'RUNNING') {
-        return { kind: 'NEXT', state, phase };
-      }
-      return {
-        kind: 'NEXT',
-        state: { ...state, status: 'RUNNING' },
-        phase: `RUNNING_${state.mode}` as TimerPhase,
-      };
-    }
-
-    case 'ON_PAUSE': {
-      if (state.status !== 'RUNNING') {
-        return { kind: 'NEXT', state, phase };
-      }
-      return {
-        kind: 'NEXT',
-        state: { ...state, status: 'PAUSED' },
-        phase: `PAUSED_${state.mode}` as TimerPhase,
-      };
-    }
-
-    case 'ON_TICK': {
-      if (state.status !== 'RUNNING') {
-        return { kind: 'NEXT', state, phase };
-      }
-      const next = Math.max(0, state.timeLeft - event.secondsElapsed);
-      if (next > 0) {
-        return { kind: 'NEXT', state: { ...state, timeLeft: next }, phase };
-      }
-      // Tempo esgotado → transição de completude de ciclo
-      return {
-        kind: 'COMPLETED_CYCLE',
-        state: { ...state, timeLeft: 0 },
-        phase: 'COMPLETED',
-        completedMode: state.mode,
-      };
-    }
-
-    case 'ON_COMPLETE': {
-      const completedFocus = state.mode === 'FOCUS';
-      const nextCycle = completedFocus
-        ? (state.currentCycle % config.cyclesBeforeLongBreak) + 1
-        : state.currentCycle;
-      const next = completedFocus
-        ? nextMode(state.mode, state.currentCycle, config)
-        : 'FOCUS';
-
-      return {
-        kind: 'NEXT',
-        state: {
-          mode: next,
-          status: 'IDLE',
-          timeLeft: durationOf(config, next),
-          currentCycle: nextCycle,
-          totalCompletedSessions: state.totalCompletedSessions + (completedFocus ? 1 : 0),
-        },
-        phase: 'IDLE',
-      };
-    }
-
-    case 'ON_SKIP': {
-      const next = state.mode === 'FOCUS'
-        ? nextMode(state.mode, state.currentCycle, config)
-        : 'FOCUS';
-      const skipCompletedFocus = state.mode === 'FOCUS';
-
-      return {
-        kind: 'NEXT',
-        state: {
-          mode: next,
-          status: 'IDLE',
-          timeLeft: durationOf(config, next),
-          currentCycle: skipCompletedFocus
-            ? (state.currentCycle % config.cyclesBeforeLongBreak) + 1
-            : state.currentCycle,
-          totalCompletedSessions:
-            state.totalCompletedSessions + (skipCompletedFocus ? 1 : 0),
-        },
-        phase: 'IDLE',
-      };
-    }
-
+    case 'ON_START':
+      return handleStart(state, phase);
+    case 'ON_PAUSE':
+      return handlePause(state, phase);
+    case 'ON_TICK':
+      return handleTick(state, event.secondsElapsed, phase);
+    case 'ON_COMPLETE':
+      return handleComplete(state, config);
+    case 'ON_SKIP':
+      return handleSkip(state, config);
     case 'ON_RESET':
-    default: {
-      return {
-        kind: 'NEXT',
-        state: {
-          ...INITIAL_TIMER_STATE,
-          mode: state.mode,
-          timeLeft: durationOf(config, state.mode),
-          currentCycle: clamp(state.currentCycle, 1, config.cyclesBeforeLongBreak),
-        },
-        phase: 'IDLE',
-      };
-    }
+      return handleReset(state, config);
   }
 }
-
-/** Indica se o phase representa um estado em execução. */
-export const isRunning = (phase: TimerPhase): boolean => phase.startsWith('RUNNING');

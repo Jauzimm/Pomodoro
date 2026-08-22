@@ -1,15 +1,15 @@
 // ============================================================================
-// WALLPAPER COLOR EXTRACTOR — Extrai as 3 cores predominantes do wallpaper ativo
+// WALLPAPER COLOR EXTRACTOR — Extração de paleta cromática do plano de fundo
 // Camada: Application Logic (serviço de paleta para efeitos visuais)
 // ============================================================================
 
-export interface RGB {
-  r: number;
-  g: number;
-  b: number;
-}
+import {
+  type RGB,
+  type WallpaperPalette,
+  quantizeDominantColors,
+} from './colorQuantizer';
 
-export type WallpaperPalette = [RGB, RGB, RGB];
+export type { RGB, WallpaperPalette };
 
 /** Paleta padrão (quando nenhum wallpaper está ativo — tema escuro padrão). */
 export const DEFAULT_WALLPAPER_PALETTE: WallpaperPalette = [
@@ -55,8 +55,8 @@ export const PRESET_WALLPAPER_PALETTES: Record<string, WallpaperPalette> = {
 const paletteCache = new Map<string, WallpaperPalette>();
 
 /**
- * Extrai dinamicamente as 3 cores mais predominantes e vibrantes de uma imagem base64 / dataUrl.
- * Executa uma amostragem rápida (64x64) com quantização e cálculo de saturação.
+ * Extrai dinamicamente as 3 cores predominantes de uma imagem (data URL).
+ * Realiza amostragem em canvas auxiliar (64x64) e aplica quantização cromática ponderada.
  */
 export function extractPredominantColorsFromDataUrl(dataUrl: string): Promise<WallpaperPalette> {
   const cached = paletteCache.get(dataUrl);
@@ -85,60 +85,8 @@ export function extractPredominantColorsFromDataUrl(dataUrl: string): Promise<Wa
 
         ctx.drawImage(img, 0, 0, size, size);
         const data = ctx.getImageData(0, 0, size, size).data;
-        const buckets = new Map<string, { r: number; g: number; b: number; count: number }>();
+        const result = quantizeDominantColors(data, DEFAULT_WALLPAPER_PALETTE);
 
-        for (let i = 0; i < data.length; i += 4) {
-          const r = data[i];
-          const g = data[i + 1];
-          const b = data[i + 2];
-          const a = data[i + 3];
-          if (a < 128) continue;
-
-          const brightness = (r + g + b) / 3;
-          // Ignora pixels excessivamente escuros para que as partículas tenham contraste e brilho
-          if (brightness < 30) continue;
-
-          const max = Math.max(r, g, b);
-          const min = Math.min(r, g, b);
-          const sat = max - min;
-          const weight = 1 + (sat / 255) * 2.5;
-
-          const qr = (r >> 4) << 4;
-          const qg = (g >> 4) << 4;
-          const qb = (b >> 4) << 4;
-          const key = `${qr},${qg},${qb}`;
-
-          const existing = buckets.get(key);
-          if (existing) {
-            existing.r += r * weight;
-            existing.g += g * weight;
-            existing.b += b * weight;
-            existing.count += weight;
-          } else {
-            buckets.set(key, { r: r * weight, g: g * weight, b: b * weight, count: weight });
-          }
-        }
-
-        const sorted = Array.from(buckets.values()).sort((a, b) => b.count - a.count);
-        const colors: RGB[] = [];
-
-        for (const bucket of sorted) {
-          const avgR = Math.round(bucket.r / bucket.count);
-          const avgG = Math.round(bucket.g / bucket.count);
-          const avgB = Math.round(bucket.b / bucket.count);
-
-          const isDistinct = colors.every((c) => Math.hypot(c.r - avgR, c.g - avgG, c.b - avgB) > 42);
-          if (isDistinct) {
-            colors.push({ r: avgR, g: avgG, b: avgB });
-            if (colors.length >= 3) break;
-          }
-        }
-
-        while (colors.length < 3) {
-          colors.push(DEFAULT_WALLPAPER_PALETTE[colors.length]);
-        }
-
-        const result: WallpaperPalette = [colors[0], colors[1], colors[2]];
         paletteCache.set(dataUrl, result);
         resolve(result);
       } catch {
