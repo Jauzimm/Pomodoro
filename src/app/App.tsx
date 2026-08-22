@@ -17,6 +17,7 @@ import { Header } from './components/Header';
 import { Sidebar, type SidebarSection } from './components/Sidebar';
 import { ParticleCanvas } from '../shared/components/ui/ParticleCanvas';
 import { useAppEffects } from './useAppEffects';
+import { Analytics } from '@vercel/analytics/react';
 
 /**
  * Aplicação PomoraNeo: orquestra módulos, hooks de efeito e o layout.
@@ -106,6 +107,7 @@ export default function App() {
 
       {/* Espaço reservado para a barra de navegação inferior no mobile. */}
       <div className="h-28 lg:hidden" aria-hidden="true" />
+      <Analytics />
     </div>
   );
 }
