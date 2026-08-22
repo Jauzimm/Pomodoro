@@ -5,8 +5,8 @@ import {
   DEFAULT_WALLPAPER_PALETTE,
   PRESET_WALLPAPER_PALETTES,
   extractPredominantColorsFromDataUrl,
+  type WallpaperPalette,
 } from '../../../modules/wallpaper/services/wallpaperColorExtractor';
-import type { WallpaperPalette } from '../../../modules/wallpaper/services/wallpaperColorExtractor';
 
 type DepthLayer = 'back' | 'mid' | 'front';
 
@@ -17,6 +17,8 @@ interface Particle {
   speedY: number;
   angle: number;
   rotSpeed: number;
+  trailAngles: number[];
+  trailRotSpeeds: number[];
   layer: DepthLayer;
   parallaxFactor: number;
   numTrail: number;
@@ -50,7 +52,7 @@ function createParticle(
   let speedY = 0.35;
   let parallaxFactor = 0.25;
   let numTrail = 3;
-  let spacing = 4;
+  let spacing = 3;
 
   if (layer === 'back') {
     // Fundo: menores (3.0px - 4.5px), baixa opacidade, movimento lento e leve paralaxe
@@ -59,7 +61,7 @@ function createParticle(
     speedY = 0.25 + Math.random() * 0.25;
     parallaxFactor = 0.15 + Math.random() * 0.10;
     numTrail = 2 + Math.floor(Math.random() * 2); // 2 a 3
-    spacing = size * 0.7 + 1.2;
+    spacing = size * 0.58 + 0.8; // Cauda mais junta e compacta
   } else if (layer === 'mid') {
     // Plano Médio: tamanho intermediário (+2px: 5.2px - 7.0px), opacidade e velocidade moderadas
     size = 5.2 + Math.random() * 1.8;
@@ -67,7 +69,7 @@ function createParticle(
     speedY = 0.55 + Math.random() * 0.35;
     parallaxFactor = 0.40 + Math.random() * 0.15;
     numTrail = 3 + Math.floor(Math.random() * 2); // 3 a 4
-    spacing = size * 0.75 + 1.5;
+    spacing = size * 0.62 + 1.0; // Cauda mais junta e compacta
   } else {
     // Primeiro Plano: maiores (+4px: 7.5px - 9.5px), quase opacos, movimento rápido e alta paralaxe
     size = 7.5 + Math.random() * 2.0;
@@ -75,7 +77,17 @@ function createParticle(
     speedY = 0.90 + Math.random() * 0.50;
     parallaxFactor = 0.75 + Math.random() * 0.20;
     numTrail = 4 + Math.floor(Math.random() * 2); // 4 a 5
-    spacing = size * 0.8 + 2.0;
+    spacing = size * 0.68 + 1.2; // Cauda mais junta e compacta
+  }
+
+  // Cada quadrado da cauda possui ângulo inicial e velocidade de rotação independentes em sentidos aleatórios
+  const trailAngles: number[] = [];
+  const trailRotSpeeds: number[] = [];
+  for (let k = 0; k < numTrail; k++) {
+    trailAngles.push(Math.random() * Math.PI * 2);
+    // Sentido aleatório (positivo/negativo) com velocidade de rotação viva
+    const dir = Math.random() > 0.5 ? 1 : -1;
+    trailRotSpeeds.push(dir * (0.02 + Math.random() * 0.035));
   }
 
   return {
@@ -84,7 +96,9 @@ function createParticle(
     size,
     speedY,
     angle: Math.random() * Math.PI * 2,
-    rotSpeed: (Math.random() > 0.5 ? 1 : -1) * (0.012 + Math.random() * 0.028),
+    rotSpeed: (Math.random() > 0.5 ? 1 : -1) * (0.015 + Math.random() * 0.03),
+    trailAngles,
+    trailRotSpeeds,
     layer,
     parallaxFactor,
     numTrail,
@@ -97,7 +111,8 @@ function createParticle(
 }
 
 /**
- * Canvas de partículas em background com cores dinâmicas sincronizadas ao wallpaper ativo
+ * Canvas de partículas em background com cores sincronizadas ao wallpaper ativo,
+ * rotação independente para cada quadrado da cauda em sentidos aleatórios
  * e paralaxe 3D em camadas de profundidade.
  */
 export function ParticleCanvas() {
@@ -203,9 +218,14 @@ export function ParticleCanvas() {
       for (let i = 0; i < particles.length; i++) {
         const p = particles[i];
 
-        // Atualização da física vertical e rotação contínua
+        // Atualização da rotação do quadrado principal
         p.angle += p.rotSpeed * speedFactor;
         p.y -= p.speedY * speedFactor;
+
+        // Atualização dinâmica da rotação individual dos quadrados da cauda
+        for (let k = 0; k < p.trailAngles.length; k++) {
+          p.trailAngles[k] += p.trailRotSpeeds[k] * speedFactor;
+        }
 
         // Reset quando sai pelo topo (recicla com as 3 cores ativas do wallpaper)
         const totalTailHeight = p.numTrail * p.spacing;
@@ -219,7 +239,7 @@ export function ParticleCanvas() {
         const drawX = p.x + currentParallax.x * p.parallaxFactor;
         const drawY = p.y + currentParallax.y * p.parallaxFactor;
 
-        // 1) Renderiza a cauda em fade
+        // 1) Renderiza a cauda em fade (quadrados decrescentes com rotação independente e aleatória)
         for (let k = p.numTrail; k >= 1; k--) {
           const progress = 1 - k / (p.numTrail + 1);
           const segSize = p.size * (0.35 + 0.55 * progress);
@@ -227,7 +247,7 @@ export function ParticleCanvas() {
           const halfSeg = segSize / 2;
 
           const trailY = drawY + k * p.spacing;
-          const trailAngle = p.angle - k * 0.3;
+          const trailAngle = p.trailAngles[k - 1] ?? p.angle;
 
           ctx.save();
           ctx.translate(drawX, trailY);
