@@ -76,17 +76,17 @@ export function TaskForm() {
         </p>
       )}
 
-      <div className="flex items-center gap-3">
-        <PrioritySelector value={priority} onChange={setPriority} label="Prioridade da nova tarefa" />
+      <div className="flex items-center gap-2">
+        <PrioritySelector value={priority} onChange={setPriority} label={t('task.priorityAria')} />
         <label className="flex shrink-0 items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
-          Pomodoros
+          {t('task.pomodoros')}
           <input
             type="number"
             min={1}
             max={50}
             value={estimated}
             onChange={(e) => setEstimated(Math.max(1, Math.min(50, Number(e.target.value) || 1)))}
-            aria-label="Pomodoros estimados"
+            aria-label={t('task.estimatedPomodoros')}
             className="h-8 w-14 rounded-lg border border-zinc-200 bg-white/70 px-2 text-center text-xs font-semibold tabular-nums outline-none backdrop-blur-sm transition-colors focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/30 dark:border-white/15 dark:bg-white/10 dark:text-zinc-100"
           />
         </label>

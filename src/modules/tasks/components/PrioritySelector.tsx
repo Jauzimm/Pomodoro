@@ -21,16 +21,20 @@ interface PrioritySelectorProps {
   value: TaskPriority;
   onChange: (priority: TaskPriority) => void;
   label?: string;
+  className?: string;
 }
 
 /** Seletor segmentado de prioridade (High/Medium/Low). */
-export function PrioritySelector({ value, onChange, label }: PrioritySelectorProps) {
+export function PrioritySelector({ value, onChange, label, className }: PrioritySelectorProps) {
   const { t } = useTranslation();
   return (
     <div
       role="radiogroup"
       aria-label={label ?? t('priority.label')}
-      className="flex overflow-hidden rounded-xl border border-zinc-200 bg-white/40 backdrop-blur-sm dark:border-white/15 dark:bg-white/5"
+      className={cn(
+        'flex overflow-hidden rounded-xl border border-zinc-200 bg-white/40 backdrop-blur-sm dark:border-white/15 dark:bg-white/5',
+        className,
+      )}
     >
       {PRIORITY_OPTIONS.map((option) => {
         const active = value === option.id;
