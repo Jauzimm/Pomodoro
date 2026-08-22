@@ -23,6 +23,7 @@ class AudioController {
   private readonly strategies: AudioStrategy[];
 
   private ambient: { type: AmbientSoundType; strategy: AudioStrategy } | null = null;
+  private pendingAmbientType: AmbientSoundType | null = null;
 
   constructor() {
     // A síntese Web Audio é o fallback garantido: além de ser resolvida
@@ -55,10 +56,21 @@ class AudioController {
 
   /** Toca o alarme de conclusão de ciclo na primeira estratégia capaz. */
   async playAlert(sound: SoundAlertPreset, volume: number): Promise<void> {
+    if (volume <= 0) {
+      this.stopAlert();
+      return;
+    }
     // Garante um único alarme por vez: corta qualquer alerta em reprodução.
     this.stopAlert();
     const strategy = await this.resolveStrategy('alert', sound);
     strategy.playAlert(sound, volume);
+  }
+
+  /** Ajusta o volume do alerta ativo em tempo real. */
+  setAlertVolume(volume: number): void {
+    for (const strategy of this.strategies) {
+      strategy.setAlertVolume(volume);
+    }
   }
 
   /** Interrompe imediatamente o alarme em reprodução (em todas as estratégias). */
@@ -71,6 +83,8 @@ class AudioController {
    * `type = null` desliga; caso contrário escolhe a melhor estratégia.
    */
   async setAmbient(type: AmbientSoundType | null, volume: number): Promise<void> {
+    this.pendingAmbientType = type;
+
     if (type === null) {
       this.ambient?.strategy.stopAmbient();
       this.ambient = null;
@@ -83,8 +97,13 @@ class AudioController {
     }
 
     this.ambient?.strategy.stopAmbient();
+    this.ambient = null;
 
     const strategy = await this.resolveStrategy('ambient', type);
+    if (this.pendingAmbientType !== type) {
+      return;
+    }
+
     strategy.startAmbient(type, volume);
     this.ambient = { type, strategy };
   }
@@ -99,6 +118,7 @@ class AudioController {
     this.stopAlert();
     this.ambient?.strategy.stopAll();
     this.ambient = null;
+    this.pendingAmbientType = null;
   }
 }
 

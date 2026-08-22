@@ -36,6 +36,7 @@ export function Slider({
       step={step}
       disabled={disabled}
       onChange={(e) => onChange(Number(e.target.value))}
+      onInput={(e) => onChange(Number((e.target as HTMLInputElement).value))}
     />
   );
 }

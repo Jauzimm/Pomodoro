@@ -53,11 +53,12 @@ export class HtmlAudioFileStrategy implements AudioStrategy {
   playAlert(sound: SoundAlertPreset, volume: number): void {
     this.stopAlert();
 
+    const clampedVolume = Math.min(1, Math.max(0, volume));
     const audio = new Audio(`/sounds/${sound.toLowerCase()}.mp3`);
-    audio.volume = volume;
+    audio.volume = clampedVolume;
 
     // Falha ao carregar/reproduzir → delega para a estratégia de síntese.
-    const onFail = () => this.fallback?.playAlert(sound, volume);
+    const onFail = () => this.fallback?.playAlert(sound, clampedVolume);
     audio.addEventListener('error', onFail, { once: true });
     audio.addEventListener(
       'ended',
@@ -70,6 +71,12 @@ export class HtmlAudioFileStrategy implements AudioStrategy {
     void audio.play().catch(onFail);
   }
 
+  setAlertVolume(volume: number): void {
+    if (this.alertElement) {
+      this.alertElement.volume = Math.min(1, Math.max(0, volume));
+    }
+  }
+
   stopAlert(): void {
     if (this.alertElement) {
       this.alertElement.pause();
@@ -80,6 +87,7 @@ export class HtmlAudioFileStrategy implements AudioStrategy {
   startAmbient(type: AmbientSoundType, volume: number): void {
     this.stopAmbient();
     const session = ++this.ambientSession;
+    const clampedVolume = Math.min(1, Math.max(0, volume));
 
     const src =
       type === 'LOFI_BEATS' && LOFI_STREAM_URL
@@ -88,14 +96,14 @@ export class HtmlAudioFileStrategy implements AudioStrategy {
 
     const audio = new Audio(src);
     audio.loop = true;
-    audio.volume = volume;
+    audio.volume = clampedVolume;
     this.ambientElement = audio;
 
     // Só delega para a síntese se este ainda for o ambiente desejado
     // (evita trocas em cascata ao alternar ambientes rapidamente).
     const onFail = () => {
       if (session === this.ambientSession) {
-        this.fallback?.startAmbient(type, volume);
+        this.fallback?.startAmbient(type, clampedVolume);
       }
     };
     audio.addEventListener('error', onFail, { once: true });
@@ -103,7 +111,9 @@ export class HtmlAudioFileStrategy implements AudioStrategy {
   }
 
   setAmbientVolume(volume: number): void {
-    if (this.ambientElement) this.ambientElement.volume = volume;
+    if (this.ambientElement) {
+      this.ambientElement.volume = Math.min(1, Math.max(0, volume));
+    }
   }
 
   stopAmbient(): void {

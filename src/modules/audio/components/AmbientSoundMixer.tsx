@@ -42,6 +42,7 @@ export function AmbientSoundMixer() {
   const audio = useStore(selectAudio);
   const setAmbientType = useStore((s) => s.setAmbientType);
   const setAmbientVolume = useStore((s) => s.setAmbientVolume);
+  const toggleMute = useStore((s) => s.toggleMute);
   const { t } = useTranslation();
 
   return (
@@ -95,11 +96,20 @@ export function AmbientSoundMixer() {
         <span className="w-8 text-right text-xs font-medium text-zinc-400 tabular-nums dark:text-zinc-500">
           {Math.round(audio.ambientVolume * 100)}
         </span>
-        {audio.isMuted ? (
-          <VolumeX className="size-4 shrink-0 text-zinc-400" aria-hidden="true" />
-        ) : (
-          <Volume2 className="size-4 shrink-0 text-zinc-400" aria-hidden="true" />
-        )}
+        <button
+          type="button"
+          onClick={toggleMute}
+          disabled={ambientType === null}
+          aria-label={audio.isMuted ? t('audio.unmute') : t('audio.mute')}
+          title={audio.isMuted ? t('audio.unmute') : t('audio.mute')}
+          className="flex size-7 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+        >
+          {audio.isMuted ? (
+            <VolumeX className="size-4 shrink-0" aria-hidden="true" />
+          ) : (
+            <Volume2 className="size-4 shrink-0" aria-hidden="true" />
+          )}
+        </button>
       </div>
     </div>
   );

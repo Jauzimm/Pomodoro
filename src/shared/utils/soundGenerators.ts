@@ -73,6 +73,8 @@ export function createTone(
   const release = options.release ?? Math.min(0.15, duration / 2);
   const startAt = options.startAt ?? ctx.currentTime + 0.02;
 
+  const targetVol = Math.max(0.0001, volume);
+
   const osc = ctx.createOscillator();
   osc.type = type;
   osc.frequency.setValueAtTime(frequency, startAt);
@@ -80,8 +82,8 @@ export function createTone(
 
   const gain = ctx.createGain();
   gain.gain.setValueAtTime(0.0001, startAt);
-  gain.gain.exponentialRampToValueAtTime(volume, startAt + attack);
-  gain.gain.setValueAtTime(volume, startAt + duration - release);
+  gain.gain.exponentialRampToValueAtTime(targetVol, startAt + attack);
+  gain.gain.setValueAtTime(targetVol, startAt + duration - release);
   gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
 
   osc.connect(gain);
@@ -108,6 +110,7 @@ export function createNoiseBurst(
   const { frequency, duration, volume = 1 } = options;
   const q = options.q ?? 1;
   const startAt = options.startAt ?? ctx.currentTime + 0.02;
+  const targetVol = Math.max(0.0001, volume);
 
   const buffer = createNoiseBuffer(ctx, options.color ?? 'white', 1);
   const src = ctx.createBufferSource();
@@ -121,7 +124,7 @@ export function createNoiseBurst(
 
   const gain = ctx.createGain();
   gain.gain.setValueAtTime(0.0001, startAt);
-  gain.gain.exponentialRampToValueAtTime(volume, startAt + 0.02);
+  gain.gain.exponentialRampToValueAtTime(targetVol, startAt + 0.02);
   gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
 
   src.connect(filter);

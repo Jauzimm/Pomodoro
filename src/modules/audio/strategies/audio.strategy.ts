@@ -17,6 +17,8 @@ export interface AudioStrategy {
   canPlayAmbient(type: AmbientSoundType): Promise<boolean>;
   /** Toca o alerta de conclusão de ciclo (fire-and-forget). */
   playAlert(sound: SoundAlertPreset, volume: number): void;
+  /** Ajusta o volume do alerta ativo em tempo real. */
+  setAlertVolume(volume: number): void;
   /** Interrompe imediatamente qualquer alerta em reprodução (apenas um por vez). */
   stopAlert(): void;
   /** Inicia (ou troca) o som ambiente contínuo. */

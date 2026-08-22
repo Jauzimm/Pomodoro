@@ -85,20 +85,36 @@ export function AlertSoundSelector() {
           <div className="flex flex-1 items-center gap-3">
             <Slider
               value={audio.alertVolume * 100}
-              onChange={(v) => setAlertVolume(v / 100)}
+              onChange={(v) => {
+                const vol = v / 100;
+                setAlertVolume(vol);
+                audioController.setAlertVolume(vol);
+              }}
               min={0}
               max={100}
               label={t('audio.alertVolume')}
             />
-          <span className="w-8 text-right text-xs font-medium text-zinc-400 tabular-nums dark:text-zinc-500">
-            {Math.round(audio.alertVolume * 100)}
-          </span>
-          {audio.alertVolume === 0 ? (
-            <VolumeX className="size-4 shrink-0 text-zinc-400" aria-hidden="true" />
-          ) : (
-            <Volume2 className="size-4 shrink-0 text-zinc-400" aria-hidden="true" />
-          )}
-        </div>
+            <span className="w-8 text-right text-xs font-medium text-zinc-400 tabular-nums dark:text-zinc-500">
+              {Math.round(audio.alertVolume * 100)}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                const newVol = audio.alertVolume > 0 ? 0 : 0.6;
+                setAlertVolume(newVol);
+                audioController.setAlertVolume(newVol);
+              }}
+              aria-label={audio.alertVolume === 0 ? t('audio.unmute') : t('audio.mute')}
+              title={audio.alertVolume === 0 ? t('audio.unmute') : t('audio.mute')}
+              className="flex size-7 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+            >
+              {audio.alertVolume === 0 ? (
+                <VolumeX className="size-4 shrink-0" aria-hidden="true" />
+              ) : (
+                <Volume2 className="size-4 shrink-0" aria-hidden="true" />
+              )}
+            </button>
+          </div>
       </div>
     </div>
   );

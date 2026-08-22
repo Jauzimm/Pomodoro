@@ -97,9 +97,13 @@ export class WebAudioSynthStrategy implements AudioStrategy {
   playAlert(sound: SoundAlertPreset, volume: number): void {
     this.stopAlert();
 
+    const clampedVolume = Math.min(1, Math.max(0, volume));
+    if (clampedVolume <= 0) return;
+
     const ctx = getAudioContext();
     if (ctx.state === 'suspended') void ctx.resume();
     const master = this.createMaster();
+    master.gain.value = clampedVolume;
     this.alertMaster = master;
     const now = ctx.currentTime + 0.02;
 
@@ -125,7 +129,7 @@ export class WebAudioSynthStrategy implements AudioStrategy {
             duration: 4,
             attack: 0.25,
             release: 1.2,
-            volume: (volume / harmonics.length) * (i === 0 ? 1.15 : 0.65),
+            volume: (1 / harmonics.length) * (i === 0 ? 1.15 : 0.65),
             detune: i === 0 ? 0 : (Math.random() - 0.5) * 6,
           });
         });
@@ -142,7 +146,7 @@ export class WebAudioSynthStrategy implements AudioStrategy {
             duration: 0.13,
             attack: 0.004,
             release: 0.02,
-            volume: volume * 0.5,
+            volume: 0.5,
           });
         }
         break;
@@ -155,10 +159,21 @@ export class WebAudioSynthStrategy implements AudioStrategy {
           duration: 0.16,
           attack: 0.006,
           release: 0.05,
-          volume: volume * 0.8,
+          volume: 0.8,
         });
         break;
       }
+    }
+  }
+
+  setAlertVolume(volume: number): void {
+    if (this.alertMaster) {
+      const clampedVolume = Math.min(1, Math.max(0, volume));
+      this.alertMaster.gain.setTargetAtTime(
+        clampedVolume,
+        getAudioContext().currentTime,
+        0.05,
+      );
     }
   }
 
