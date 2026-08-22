@@ -14,8 +14,8 @@ npm run lint                      # oxlint (sem flags extras)
 npm run preview                   # serve o build de produção
 ```
 
-- Sem test runner. Validação = `build` + `lint` + teste manual (som, timer, persistência).
-- FSM do timer é pura (sem DOM): smoke test pontual com `npx tsx <arquivo>` (`tsx` não é dependência; `npx` baixa sob demanda).
+- Testes unitários em `tests/*.test.ts` (asserts puros, sem framework): rode com `npx tsx tests/<arquivo>.test.ts` (`tsx` não é dependência; `npx` baixa sob demanda). Suíte atual: `timer.fsm`, `eventBus`, `stateMigration`, `taskSorting`.
+- FSM do timer é pura (sem DOM): os testes cobrem isso; smoke test pontual segue o mesmo padrão `npx tsx <arquivo>`.
 - Para reproduzir crash de render (tela em branco só com fundo): `renderToStaticMarkup` de `App` com `react-dom/server` + shims de `window`/`document`/`navigator`/`localStorage` (e um valor obsoeto no localStorage para simular estado persistido). Roda com `npx tsx --tsconfig tsconfig.app.json <arquivo>.tsx`.
 
 ## Arquitetura
@@ -24,28 +24,35 @@ Camadas (Clean Architecture leve, Feature-First). Dependências apontam para bai
 
 ```
 src/
-├── app/            # App.tsx (layout), store.ts (slices + persist), storage.ts, useShortcuts, useZenMode, Header, Sidebar
+├── app/            # App.tsx (layout), store.ts (slices + persist), storage.ts,
+│   │               # schema/stateMigration.ts (sanitização do estado persistido),
+│   │               # useAppEffects (orquestrador de efeitos), useShortcuts, useZenMode, Header, Sidebar
 ├── core/           # Regras puras, sem React/DOM
 │   ├── types/domain.ts        # Contratos (TimerState, Task, AudioSettings…)
 │   ├── constants/index.ts     # Defaults 25/5/15, limites, metadados de UI
-│   ├── domain/timer.fsm.ts    # FSM pura: timerReducer + eventos ON_*
+│   ├── domain/timer.fsm.ts    # FSM pura declarativa: timerReducer + eventos ON_*
 │   ├── domain/eventBus.ts     # Observer: 'timer:completed' | 'timer:phase-changed'
 │   └── adapters/storage.adapter.ts  # StorageAdapter<T> + LocalStorageAdapter
 ├── modules/        # 1 pasta por funcionalidade: timer, tasks, notes, audio, settings, wallpaper
 │   └── <modulo>/
-│       ├── components/        # componentes React (PascalCase, named export)
-│       ├── hooks/             # hooks de efeito/observadores
-│       ├── *.slice.ts         # slice Zustand + seletores granulares
-│       └── services|strategies/  # lógica de aplicação (ex.: audioController, ticking)
-└── shared/         # ui (Button, Modal, Card, Slider, Switch, Badge), hooks, i18n (translations/labels/detect), utils (cn, formatTime)
+│       ├── components/          # componentes React (PascalCase, named export)
+│       ├── hooks/               # hooks de efeito/observadores
+│       ├── domain/              # regras puras do módulo (ex.: tasks: taskSorting, taskConstants)
+│       ├── engine|services|strategies/  # lógica de aplicação (audio: engine/ + strategies/)
+│       └── *.slice.ts           # slice Zustand + seletores granulares
+└── shared/         # ui (Button, Modal, Card, Slider, Switch, Badge, particles/),
+                    # hooks, i18n (translations/labels/detect), utils (cn, formatTime, id, math)
 ```
 
-* **Store:** `src/app/store.ts` compõe slices via `createTimerSlice(set, get, api)`. Persist com `partialize` (timer em execução NUNCA é persistido). Chave: `studyspace:app-state:v1`.
+* **Store:** `src/app/store.ts` compõe slices via `createTimerSlice(set, get, api)`. Persist com `partialize` (timer em execução NUNCA é persistido). Chave: `studyspace:app-state:v1`; o `merge` delega a `sanitizePersistedState` em `src/app/schema/stateMigration.ts`, que valida/corrige cada campo contra os defaults (nunca confie no estado vindo do localStorage).
 * **Fluxo de conclusão de ciclo:** FSM (`ON_TICK` → `COMPLETED_CYCLE`) → slice aplica `ON_COMPLETE` → emite `timer:completed` no eventBus → assinantes desacoplados: alarme (audio), Notification API (settings), incremento da tarefa ativa (tasks).
-* **Áudio (Strategy Pattern):** `AudioController` resolve a primeira estratégia capaz (`HtmlAudioFileStrategy` → `WebAudioSynthStrategy`); síntese é o fallback garantido e também é injetada na HTML para falhas de runtime.
+* **Efeitos globais:** `App.tsx` é só layout — toda inicialização de serviços (ticking, áudio, notificações, wallpaper, atalhos, zen) passa pelo hook orquestrador `src/app/useAppEffects.ts`.
+* **Áudio (Strategy Pattern):** `AudioController` resolve a primeira estratégia capaz (`HtmlAudioFileStrategy` → `WebAudioSynthStrategy`); síntese é o fallback garantido e também é injetada na HTML para falhas de runtime. A síntese vive em `modules/audio/engine/` (`audioContextManager` = singleton lazy do `AudioContext`; `ambientGenerators`; `synthAlerts`) — estratégias apenas orquestram.
+* **Partículas 3D:** `shared/components/ui/ParticleCanvas.tsx` renderiza paralaxe em 3 camadas de profundidade com cauda dinâmica; motor decomposto em `shared/components/ui/particles/` (`particleTypes`, `particleFactory`, `particleRenderer`). As cores vêm da paleta do wallpaper ativo (`wallpaperColorExtractor` + `colorQuantizer` puro). Toggle `particlesEnabled` no SettingsModal; default é `true`.
 * **Plano de fundo (wallpaper):** presets são SVGs em `public/wallpapers/` (assets próprios, sem rede); uploads customizados viram data URLs persistidas no localStorage — respeite os limites de `presets.ts` (2 MB por imagem, máx. 5) ou a cota de ~5MB estoura. Aplicação via `useWallpaperEffect` (define `background-image` + classe `ss-wallpaper` no `body`, com overlay de legibilidade).
 * **Layout:** tela principal = só `PomodoroCard`. Tarefas/Áudio/Notas/Plano de fundo vivem na `Sidebar` colapsável (rail de ícones + painel 360px desktop, drawer + bottom bar no mobile).
 * **Modo Zen:** durante FOCO em execução, `useZenMode` oculta controles após 10s sem mouse/tecla (prop `zenHidden` em Header/Sidebar/PomodoroCard); qualquer movimento/clique/tecla revela. Fora de foco rodando, nunca esconde.
+* **Deploy & segurança:** deploy na Vercel; `<Analytics />` de `@vercel/analytics/react` está no `App.tsx`. Headers de segurança (CSP, X-Frame-Options, HSTS etc.) vivem em `vercel.json` — se adicionar domínio externo (script/connect/img), atualize o CSP correspondente. Uploads de wallpaper são validados no upload (data URL + limites) e re-sanitizados ao aplicar (`sanitizeCssUrl` em `useWallpaperEffect`, whitelist de esquemas + escape para `background-image`).
 
 ## Seções
 
@@ -54,7 +61,7 @@ src/
 * **Seletores Zustand:** use seletores granulares (`useStore(selectTimeLeft)`) — nunca `useStore()` sem seletor nem objetos derivados em `useMemo` para `selectActiveTask`-like; o timer atualiza 1×/segundo e não pode re-renderizar Tasks/Notas.
 * **Slices:** recebem `set`/`get` do store composto. Ações com efeito colateral (ex.: `tick`) calculam transição fora do `set` e emitem eventos após aplicar. `import type { AppStore }` é aceitável (type-only) de slices para `app/store`.
 * **UI:** Tailwind v4 — tema escuro **permanente** (classe `.dark` fixa no `<html>` em `index.html`; variante customizada em `index.css`); não há modo claro nem toggle. Cores slate/zinc; `rounded-2xl`; `cn()` de `shared/utils/cn` para conciliar classes. Ícones sempre de `lucide-react` (verificar existência no pacote antes de usar).
-* **Áudio:** toda reprodução passa pelo `audioController` singleton — nunca `new Audio()`/`AudioContext` fora de `modules/audio/strategies/`. `canPlay*` é assíncrono e verifica Content-Type (NÃO apenas `res.ok`). MP3s em `public/sounds/` (alertas) e `public/sounds/ambient/` são a fonte **preferida** e casam com um `SoundAlertPreset`/`AmbientSoundType` via nome de arquivo; a síntese Web Audio é o fallback quando o arquivo falta. **Não remova esses MP3** — voltaria tudo para síntese. Ruído branco só existe na síntese (sem equivalente gravado).
+* **Áudio:** toda reprodução passa pelo `audioController` singleton — nunca `new Audio()`/`AudioContext` fora de `modules/audio/` (`strategies/` orquestram; `engine/` detém o contexto e a síntese). `canPlay*` é assíncrono e verifica Content-Type (NÃO apenas `res.ok`). MP3s em `public/sounds/` (alertas) e `public/sounds/ambient/` são a fonte **preferida** e casam com um `SoundAlertPreset`/`AmbientSoundType` via nome de arquivo; a síntese Web Audio é o fallback quando o arquivo falta. **Não remova esses MP3** — voltaria tudo para síntese. Ruído branco só existe na síntese (sem equivalente gravado).
 * **i18n:** toda string visível do usuário vem de `src/shared/i18n/translations.ts` (chaves `TranslationKey`, dicionários `pt`/`en`/`es`); use `const { t } = useTranslation()` e `t('chave', { param })` (interpolação `{param}`). Modos/fases da FSM: `t(modeKey(mode))` / `t(phaseKey(phase))` de `shared/i18n/labels`. Nunca hardcode texto na UI. Idioma (`AppLanguage = 'pt'|'en'|'es'`, **sem** `'auto'`) fica no `SettingsSlice`; o default é `detectBrowserLanguage()` (navegador) em `shared/i18n/detect.ts`, e o seletor em `SettingsModal` mostra só 3 opções. Adicione novas chaves nos 3 idiomas. `translate()`/`resolveLanguage()` são defensivos contra valores obsoletos persistidos (não lançam).
 * **Comentários:** cabeçalho de bloco com `====` em arquivos de camada core/application; `//` inline em código ambíguo.
 * **A11y:** controles com `aria-label`, modais com foco retido + Esc, atalhos via `useHotkeys` (Espaço/R/S — pulados em inputs e botões focados).
@@ -66,7 +73,8 @@ npm run build   # typecheck (tsc -b) + build — sem erros TS
 npm run lint    # oxlint — sem erros (warnings aceitos: only-export-components em TodoList/PrioritySelector, set-state-in-effect em useMediaQuery/Scratchpad)
 ```
 
-* Se alterar `core/domain/timer.fsm.ts` ou o fluxo de ciclos: valide a sequência 4×Foco → Descanso Longo → novo bloco com smoke test (`npx tsx` + `timerReducer`).
+* Rode a suíte relevante com `npx tsx tests/<arquivo>.test.ts`: alterou FSM/eventBus → `timer.fsm` + `eventBus`; persistência/i18n → `stateMigration`; ordenação de tarefas → `taskSorting`.
+* Se alterar `core/domain/timer.fsm.ts` ou o fluxo de ciclos: valide a sequência 4×Foco → Descanso Longo → novo bloco (`tests/timer.fsm.test.ts` cobre; smoke test pontual se precisar de cenário novo).
 * Se alterar áudio: testar manualmente no navegador — pré-escuta, ambientes, mute e alarme ao completar ciclo (verificar console do Firefox para erros `text/html`).
 * Persistência: recarregar a página preserva config/tasks/notes/audio/wallpaper; o timer volta para IDLE.
 
@@ -81,7 +89,7 @@ npm run lint    # oxlint — sem erros (warnings aceitos: only-export-components
 * ❌ Não remover o spacer `<div className="h-28 lg:hidden">` do App — a bottom bar mobile é `fixed` e o cobre.
 * ❌ Não persistir `timeLeft`/`status` do timer — o `partialize` em `app/store.ts` é a fonte da verdade.
 * ❌ Nunca rodar `npm run build` fora da raiz do projeto nem usar `npm i -g` para dependências do projeto.
-* ❌ Não mudar o formato do estado persistido (`studyspace:app-state:v1`) sem sanitizar no `merge` do store: um valor obsoeto no localStorage (ex.: `language: 'auto'` depois de remover a opção) faz `t()` lançar em **todo** componente → app em branco, só o fundo. `translate()`/`resolveLanguage()` já são defensivos, e o `merge` reescreve `language` inválido para o detectado; mantenha esse padrão para qualquer campo cujo domínio possa encolher.
+* ❌ Não mudar o formato do estado persistido (`studyspace:app-state:v1`) sem sanitizar no `merge`: um valor obsoeto no localStorage (ex.: `language: 'auto'` depois de remover a opção) faz `t()` lançar em **todo** componente → app em branco, só o fundo. Toda validação/correção vive em `src/app/schema/stateMigration.ts` (`sanitizePersistedState` + sanitizers por campo) com cobertura em `tests/stateMigration.test.ts` — mantenha esse padrão para qualquer campo cujo domínio possa encolher.
 
 ## graphify
 
